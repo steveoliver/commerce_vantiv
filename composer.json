@@ -10,5 +10,7 @@
     "issues": "http://drupal.org/project/issues/commerce_vantiv",
     "source": "http://cgit.drupalcode.org/commerce_vantiv"
   },
-  "require": { }
+  "require": {
+    "litle/payments-sdk": "9.3.4"
+  }
 }
