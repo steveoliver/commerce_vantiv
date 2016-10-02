@@ -1,0 +1,14 @@
+eprotect.library.prelive:
+  version: VERSION
+  js:
+    https://request-prelive.np-securepaypage-litle.com/LitlePayPage/litle-api2.js: { external: true, minified: true, scope: footer }
+  dependencies:
+    - core/jquery
+
+eprotect.client:
+  version: VERSION
+  js:
+    js/commerce_vantiv.eprotect.js: { scope: footer }
+  dependencies:
+    - core/drupalSettings
+    - core/jquery
