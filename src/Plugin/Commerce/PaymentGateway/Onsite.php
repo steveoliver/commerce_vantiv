@@ -3,7 +3,6 @@
 namespace Drupal\commerce_vantiv\Plugin\Commerce\PaymentGateway;
 
 use Drupal\commerce_payment\CreditCard;
-use Drupal\commerce_payment\Entity\Payment;
 use Drupal\commerce_payment\Entity\PaymentInterface;
 use Drupal\commerce_payment\Entity\PaymentMethodInterface;
 use Drupal\commerce_payment\Exception\HardDeclineException;
@@ -18,11 +17,8 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Logger\RfcLogLevel;
 use Drupal\profile\Entity\ProfileInterface;
-use Drupal\user\Entity\User;
 use litle\sdk\LitleOnlineRequest;
 use litle\sdk\XmlParser as LitleXmlParser;
-use Drupal\commerce_order\Entity\OrderItem;
-use Drupal\commerce_order\Entity\Order;
 
 /**
  * Provides the Onsite payment gateway
