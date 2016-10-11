@@ -158,7 +158,7 @@ class VantivApiHelper {
    * @param string $payload_attribute
    *   The id of the DomDocumentFragment to retrieve from the response document.
    *
-   * @return array|bool
+   * @return array
    *   An array of response elements with '@' prefixes removed from some keys.
    */
   public static function getResponseArray($response_document, $payload_attribute) {
@@ -187,7 +187,7 @@ class VantivApiHelper {
       return $new_array;
     }
     else {
-      return FALSE;
+      return [];
     }
   }
 

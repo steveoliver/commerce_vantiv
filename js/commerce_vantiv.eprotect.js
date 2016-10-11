@@ -200,24 +200,30 @@
     },
 
     /**
-     * Delegates the form's submit button click event to Vantiv eProtect.
+     * Delegates the form's Continue button click event to Vantiv eProtect.
      *
      * @param {string} submitButtonId
      * @param {Drupal.settings.vantivSettings} settings
      */
     delegateSubmitButton: function(submitButtonId, settings) {
-      $('body').delegate(submitButtonId, 'click', function(event) {
+      $(submitButtonId).bind('click', {
+        settings: settings
+      }, function(event, passthru) {
+        var settings = event.data.settings;
+        if (passthru) {
+          return true;
+        }
+        var submitButton = event.currentTarget;
 
         // Clear Litle response fields.
         Drupal.vantivEprotect.setLitleResponseFields({'response': '', 'message': ''});
 
         // Build the custom success callback.
-        var form$ = $('#' + event.currentTarget.id).closest('form');
         var onSuccess = function(response) {
           Drupal.vantivEprotect.setLitleResponseFields(response);
           // @todo: Test expiration date here to avoid trip to Drupal
           // since all other payment fields are handled client-side.
-          form$.get(0).submit(form$);
+          $(submitButton).trigger('click', true);
         };
 
         // Build the request based on current form values.
