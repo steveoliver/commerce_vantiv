@@ -3,7 +3,6 @@
 namespace Drupal\commerce_vantiv\Plugin\Commerce\PaymentGateway;
 
 use Drupal\commerce_payment\CreditCard;
-use Drupal\commerce_payment\Entity\Payment;
 use Drupal\commerce_payment\Entity\PaymentInterface;
 use Drupal\commerce_payment\Entity\PaymentMethodInterface;
 use Drupal\commerce_payment\Exception\HardDeclineException;
@@ -18,11 +17,8 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Logger\RfcLogLevel;
 use Drupal\profile\Entity\ProfileInterface;
-use Drupal\user\Entity\User;
 use litle\sdk\LitleOnlineRequest;
 use litle\sdk\XmlParser as LitleXmlParser;
-use Drupal\commerce_order\Entity\OrderItem;
-use Drupal\commerce_order\Entity\Order;
 
 /**
  * Provides the Onsite payment gateway
@@ -42,13 +38,15 @@ use Drupal\commerce_order\Entity\Order;
  */
 class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
 
+  /** @var LitleOnlineRequest $api */
+  protected $api;
+
   /**
    * {@inheritdoc}
    */
-  public function __contruct(array $configuration, $plugin_id, EntityTypeManagerInterface $entity_type_manager, PaymentTypeManager $payment_type_manager, PaymentMethodTypeManager $payment_method_type_manager) {
-    parent::__construct($configuration, $plugin_id, $entity_type_manager, $payment_type_manager, $payment_method_type_manager);
-
-    // @todo: Instantiate API SDK / reusable connection here if possible.
+  public function __construct(array $configuration, $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, PaymentTypeManager $payment_type_manager, PaymentMethodTypeManager $payment_method_type_manager) {
+    parent::__construct($configuration, $plugin_id, $plugin_definition, $entity_type_manager, $payment_type_manager, $payment_method_type_manager);
+    $this->api = new LitleOnlineRequest();
   }
 
   /**
@@ -287,10 +285,13 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
         'litleToken' => $payment_method->getRemoteId(),
       ],
     ];
-    $request = new LitleOnlineRequest();
     $request_method = $capture ? 'saleRequest' : 'authorizationRequest';
     $response_property = $capture ? 'saleResponse' : 'authorizationResponse';
-    $response = $request->{$request_method}($hash_in + $request_data);
+    try {
+      $response = $this->api->{$request_method}($hash_in + $request_data);
+    } catch (\Exception $e) {
+      throw new InvalidRequestException($e->getMessage());
+    }
     $response_array = Helper::getResponseArray($response, $response_property);
 
     $this->ensureSuccessTransaction($response_array, 'Payment');
@@ -344,8 +345,11 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
     if ($payment->partial) {
       $request_data['partial'] = 'true';
     }
-    $request = new LitleOnlineRequest();
-    $response = $request->captureRequest($hash_in + $request_data);
+    try {
+      $response = $this->api->captureRequest($hash_in + $request_data);
+    } catch (\Exception $e) {
+      throw new InvalidRequestException($e->getMessage());
+    }
     $response_array = Helper::getResponseArray($response, 'captureResponse');
 
     $this->ensureSuccessTransaction($response_array, 'Capture');
@@ -371,8 +375,11 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
       'id' => $payment->getAuthorizedTime(),
       'litleTxnId' => $payment->getRemoteId(),
     ];
-    $request = new LitleOnlineRequest();
-    $response = $request->{$request_operation}($hash_in + $request_data);
+    try {
+      $response = $this->api->{$request_operation}($hash_in + $request_data);
+    } catch (\Exception $e) {
+      throw new InvalidRequestException($e->getMessage());
+    }
     $response_array = Helper::getResponseArray($response, $response_operation);
 
     $this->ensureSuccessTransaction($response_array, $operation);
@@ -401,8 +408,11 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
       'litleTxnId' => $payment->getRemoteId(),
       'amount' => Helper::getVantivAmountFormat($amount->getNumber()),
     ];
-    $request = new LitleOnlineRequest();
-    $response = $request->creditRequest($hash_in + $request_data);
+    try {
+      $response = $this->api->creditRequest($hash_in + $request_data);
+    } catch (\Exception $e) {
+      throw new InvalidRequestException($e->getMessage());
+    }
     $response_array = Helper::getResponseArray($response, 'creditResponse');
 
     $this->ensureSuccessTransaction($response_array, 'Refund');
@@ -474,8 +484,11 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
       'paypageRegistrationId' => $payment_method->getRemoteId()
     ];
 
-    $request = new LitleOnlineRequest();
-    $response = $request->registerTokenRequest($hash_in + $request_data);
+    try {
+      $response = $this->api->registerTokenRequest($hash_in + $request_data);
+    } catch (\Exception $e) {
+      throw new InvalidRequestException($e->getMessage());
+    }
     $response_array = Helper::getResponseArray($response, 'registerTokenResponse');
     $this->ensureSuccessTransaction($response_array, 'Token registration');
 
@@ -497,13 +510,13 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
    * @throws SoftDeclineException
    */
   private function ensureSuccessTransaction(array $response_array, $txn_type = 'Transaction') {
-    if (empty($response_array) || !Helper::isResponseSuccess($response_array['response'])) {
+    if (!Helper::isResponseSuccess($response_array['message'])) {
       $error = '@type failed with code @code (@message) (@id).';
       $message = $this->t($error, [
         '@type' => $txn_type,
-        '@code' => isset($response_array['response']) ? $response_array['response']: '',
-        '@message' => isset($response_array['message']) ? $response_array['message'] : '',
-        '@id' => isset($response_array['litleTxnId']) ? $response_array['litleTxnId'] : ''
+        '@code' => $response_array['response'],
+        '@message' => $response_array['message'],
+        '@id' => $response_array['litleTxnId']
       ]);
       \Drupal::logger('commerce_vantiv')->log(RfcLogLevel::ERROR, $message);
       throw new SoftDeclineException($message);
@@ -511,4 +524,3 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
   }
 
 }
-
