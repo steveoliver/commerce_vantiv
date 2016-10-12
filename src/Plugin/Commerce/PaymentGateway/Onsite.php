@@ -510,7 +510,7 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
    * @throws SoftDeclineException
    */
   private function ensureSuccessTransaction(array $response_array, $txn_type = 'Transaction') {
-    if (!Helper::isResponseSuccess($response_array['message'])) {
+    if (!Helper::isResponseSuccess($response_array['response'])) {
       $error = '@type failed with code @code (@message) (@id).';
       $message = $this->t($error, [
         '@type' => $txn_type,
