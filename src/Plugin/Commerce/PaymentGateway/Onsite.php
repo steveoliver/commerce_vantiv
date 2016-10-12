@@ -450,7 +450,7 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
     $payment_method->card_exp_year = $payment_details['expiration']['year'];
     $payment_method->setRemoteId($payment_details['response$paypageRegistrationId']);
     $payment_method->setExpiresTime($expires);
-    if ($payment_method->getOwnerId() === 0) {
+    if ($payment_method->getOwnerId() == 0) {
       $payment_method->setReusable(FALSE);
     }
     $payment_method->save();
