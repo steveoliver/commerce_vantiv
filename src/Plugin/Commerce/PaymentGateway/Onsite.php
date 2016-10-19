@@ -18,7 +18,6 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Logger\RfcLogLevel;
 use Drupal\profile\Entity\ProfileInterface;
 use litle\sdk\LitleOnlineRequest;
-use litle\sdk\XmlParser as LitleXmlParser;
 
 /**
  * Provides the Onsite payment gateway
