@@ -107,6 +107,8 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
       '#default_value' => $this->configuration['currency_merchant_map']['default'],
       '#required' => TRUE
     ];
+    // @see UrlMapper.php in Litle Payments SDK where URL is determined
+    // We should probably send transaction mode as one of the strings defined there.
     $form['url'] = [
       '#type' => 'textfield',
       '#title' => $this->t('URL'),
