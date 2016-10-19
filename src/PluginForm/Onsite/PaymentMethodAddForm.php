@@ -135,6 +135,7 @@ class PaymentMethodAddForm extends BasePaymentMethodAddForm {
     ];
     $element['#attached']['drupalSettings']['commerce_vantiv']['eprotect'] = [
       'payment_pane' => TRUE,
+      'paypage_url' => VantivApiHelper::getPaypageRequestUrl($plugin)
     ];
     $element['#attached']['library'][] = 'commerce_vantiv/eprotect.library.prelive';
     $element['#attached']['library'][] = 'commerce_vantiv/eprotect.client';

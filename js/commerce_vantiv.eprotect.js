@@ -66,8 +66,7 @@
      * @returns {string}
      */
     getPayPageRequestUrl: function(settings) {
-      // @todo pass this url in via settings.
-      return 'https://request-prelive.np-securepaypage-litle.com';
+      return settings.paypage_url;
     },
 
     /**

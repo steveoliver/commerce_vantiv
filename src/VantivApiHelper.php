@@ -4,9 +4,30 @@ namespace Drupal\commerce_vantiv;
 
 use Drupal\commerce_payment\Entity\PaymentInterface;
 use Drupal\commerce_payment\Entity\PaymentMethod;
+use Drupal\commerce_vantiv\Plugin\Commerce\PaymentGateway\OnsiteInterface;
 use litle\sdk\XmlParser as LitleXmlParser;
 
 class VantivApiHelper {
+
+  /**
+   * Gets the PayPage request URL given the current payment method.
+   *
+   * @param \Drupal\commerce_vantiv\Plugin\Commerce\PaymentGateway\OnsiteInterface $plugin
+   *   The payment gateway plugin.
+   *
+   * @return string
+   *   The URL to the PayPage/eProtect endpoint.
+   */
+  public static function getPaypageRequestUrl(OnsiteInterface $plugin) {
+    // @todo Consider Certification / Pre-Live / Post-Live Vantiv environments.
+    // @see https://github.com/steveoliver/commerce_vantiv/issues/2
+    if ($plugin->getMode() == 'test') {
+      return 'https://request-prelive.np-securepaypage-litle.com';
+    }
+    else {
+      return 'https://request.np-securepaypage-litle.com';
+    }
+  }
 
   /**
    * Gets authorization transaction expiration timestamp.
