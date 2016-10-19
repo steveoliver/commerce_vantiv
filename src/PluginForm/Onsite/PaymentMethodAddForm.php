@@ -27,8 +27,8 @@ class PaymentMethodAddForm extends BasePaymentMethodAddForm {
     }
     $this->submitBillingProfileForm($form['billing_information'], $form_state);
 
-    // @todo Get values from somewhere besides $_POST?
-    $values = $_POST['payment_information']['add_payment_method'];
+    $post_values = \Drupal::request()->request->all();
+    $values = $post_values['payment_information']['add_payment_method'];
 
     /** @var \Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\SupportsStoredPaymentMethodsInterface $payment_gateway_plugin */
     $payment_gateway_plugin = $this->plugin;
@@ -56,7 +56,8 @@ class PaymentMethodAddForm extends BasePaymentMethodAddForm {
     if (!empty($triggering_element['#ajax'])) {
       return true;
     }
-    $values = NestedArray::getValue($_POST, $element['#parents']);
+    $post_values = \Drupal::request()->request->all();
+    $values = NestedArray::getValue($post_values, $element['#parents']);
     $vantiv_card_type = $values['response$type'];
     $commerce_card_type = VantivApiHelper::getCommerceCreditCardType($vantiv_card_type);
     $card_type = CreditCard::getType($commerce_card_type);
@@ -76,8 +77,8 @@ class PaymentMethodAddForm extends BasePaymentMethodAddForm {
   public function submitCreditCardForm(array $element, FormStateInterface $form_state) {
     /** @var PaymentMethodInterface $payment_method */
     $payment_method = $this->entity;
-    // @todo Get these from somewhere besides $_POST?
-    $values = NestedArray::getValue($_POST, $element['#parents']);
+    $post_values = \Drupal::request()->request->all();
+    $values = NestedArray::getValue($post_values, $element['#parents']);
     $payment_method->card_type = VantivApiHelper::getCommerceCreditCardType($values['response$type']);
     $payment_method->card_number = $values['response$lastFour'];
     $payment_method->card_exp_month = $values['expiration']['month'];
