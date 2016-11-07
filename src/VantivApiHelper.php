@@ -207,6 +207,9 @@ class VantivApiHelper {
       $new_array['attributes'] = $attributes;
       return $new_array;
     }
+    elseif (!empty($json_dec['@attributes'])) {
+      return $json_dec['@attributes'];
+    }
     else {
       return FALSE;
     }

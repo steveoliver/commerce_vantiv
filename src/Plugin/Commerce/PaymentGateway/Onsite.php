@@ -284,6 +284,7 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
       ],
       'token' => [
         'litleToken' => $payment_method->getRemoteId(),
+        'expDate' => Helper::getVantivCreditCardExpDate($payment_method)
       ],
     ];
     $request_method = $capture ? 'saleRequest' : 'authorizationRequest';
@@ -515,9 +516,9 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
       $error = '@type failed with code @code (@message) (@id).';
       $message = $this->t($error, [
         '@type' => $txn_type,
-        '@code' => $response_array['response'],
-        '@message' => $response_array['message'],
-        '@id' => $response_array['litleTxnId']
+        '@code' => isset($response_array['response']) ? $response_array['response'] : '',
+        '@message' => isset($response_array['message']) ? $response_array['message'] : '',
+        '@id' => isset($response_array['litleTxnId']) ? $response_array['litleTxnId'] : ''
       ]);
       \Drupal::logger('commerce_vantiv')->log(RfcLogLevel::ERROR, $message);
       throw new SoftDeclineException($message);
