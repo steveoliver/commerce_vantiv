@@ -320,9 +320,6 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
     }
     /** @var Price $capture_amount */
     $capture_amount = $amount ?: $payment->getBalance();
-    // Allow multiple captures for a single authorization.
-    // @todo Get this to work.
-    // @see https://github.com/steveoliver/commerce_vantiv/issues/1
     if ($capture_amount->lessThan($payment->getBalance())) {
       $partial_capture = $payment->createDuplicate();
       $partial_capture->state = 'authorization';
