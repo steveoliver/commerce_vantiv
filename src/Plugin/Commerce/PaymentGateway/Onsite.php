@@ -229,7 +229,7 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
         'title' => $this->t('Void'),
         'page_title' => $this->t('Void payment'),
         'plugin_form' => 'void-payment',
-        'access' => (($state == 'authorization' && $auth_expired === FALSE) || ($state == 'capture_completed' && $txn_same_day)
+        'access' => (($state == 'authorization' && $auth_expired === FALSE) || ($state == 'capture_completed' && $txn_same_day) || ($state == 'capture_refunded' && $txn_same_day)
         ),
       ];
       $operations['refund'] = [
