@@ -135,21 +135,23 @@ class VantivApiHelper {
   /**
    * Gets a Vantiv formatted amount from a decimal amount.
    *
-   * @param string $amount_decimal
+   * @param string $amount
    *   Decimal amount.
    *
    * @return string
-   *   Amount formatted with hundredths digits but no decimal point.
+   *   Deimal amount with no decimal point, to a scale of 2 (hundredths digits).
    *
    *   For example:
    *     - 22.00 becomes 2200
    *     - 22 becomes 2200
    */
-  public static function getVantivAmountFormat($amount_decimal) {
-    if (strpos($amount_decimal, '.') !== FALSE) {
-      return str_replace('.', '', $amount_decimal);
+  public static function getVantivAmountFormat($amount) {
+    // Vantiv does not want decimal points in their price amounts.
+    if (strpos($amount, '.') !== FALSE) {
+      $amount = str_replace('.', '', $amount);
     }
-    return $amount_decimal . '00';
+    // Commerce Price Items are decimal to a scale of 6, we need a scale of 2.
+    return substr($amount, 0, -4);
   }
 
   /**
