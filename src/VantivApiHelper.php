@@ -146,12 +146,17 @@ class VantivApiHelper {
    *     - 22 becomes 2200
    */
   public static function getVantivAmountFormat($amount) {
+    // Commerce Price Items are decimal to a scale of 6, we need a scale of 2.
+    // Sometimes, though, as in a payment (admin) form, the amount will be scale of 2.
+    if (substr($amount, -7, 1) === '.') {
+      $amount = substr($amount, 0, -4);
+    }
     // Vantiv does not want decimal points in their price amounts.
     if (strpos($amount, '.') !== FALSE) {
       $amount = str_replace('.', '', $amount);
     }
-    // Commerce Price Items are decimal to a scale of 6, we need a scale of 2.
-    return substr($amount, 0, -4);
+
+    return $amount;
   }
 
   /**
