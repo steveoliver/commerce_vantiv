@@ -15,41 +15,6 @@ class PaymentMethodAddForm extends BasePaymentMethodAddForm {
   /**
    * {@inheritdoc}
    */
-  public function submitConfigurationForm(array &$form, FormStateInterface $form_state) {
-    /** @var \Drupal\commerce_payment\Entity\PaymentMethodInterface $payment_method */
-    $payment_method = $this->entity;
-
-    if ($payment_method->bundle() == 'credit_card') {
-      $this->submitCreditCardForm($form['payment_details'], $form_state);
-    }
-    elseif ($payment_method->bundle() == 'paypal') {
-      $this->submitPayPalForm($form['payment_details'], $form_state);
-    }
-    $payment_method->setBillingProfile($form['billing_information']['#profile']);
-
-    $post_values = \Drupal::request()->request->all();
-    $values = $post_values['payment_information']['add_payment_method'];
-
-    /** @var \Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\SupportsStoredPaymentMethodsInterface $payment_gateway_plugin */
-    $payment_gateway_plugin = $this->plugin;
-    // The payment method form is customer facing. For security reasons
-    // the returned errors need to be more generic.
-    try {
-      $payment_gateway_plugin->createPaymentMethod($payment_method, $values['payment_details']);
-    }
-    catch (DeclineException $e) {
-      \Drupal::logger('commerce_payment')->warning($e->getMessage());
-      throw new DeclineException('We encountered an error processing your payment method. Please verify your details and try again.');
-    }
-    catch (PaymentGatewayException $e) {
-      \Drupal::logger('commerce_payment')->error($e->getMessage());
-      throw new PaymentGatewayException('We encountered an unexpected error processing your payment method. Please try again later.');
-    }
-  }
-
-  /**
-   * {@inheritdoc}
-   */
   public function validateCreditCardForm(array &$element, FormStateInterface $form_state) {
     // @todo Do not validate if ajax
     $triggering_element = $form_state->getTriggeringElement();
