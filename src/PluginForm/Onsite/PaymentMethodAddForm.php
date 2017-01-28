@@ -25,7 +25,7 @@ class PaymentMethodAddForm extends BasePaymentMethodAddForm {
     elseif ($payment_method->bundle() == 'paypal') {
       $this->submitPayPalForm($form['payment_details'], $form_state);
     }
-    $this->submitBillingProfileForm($form['billing_information'], $form_state);
+    $payment_method->setBillingProfile($form['billing_information']['#profile']);
 
     $post_values = \Drupal::request()->request->all();
     $values = $post_values['payment_information']['add_payment_method'];
