@@ -78,25 +78,62 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
   }
 
   /**
+   * Gets configuration values combined with any set environment variables.
+   */
+  protected function getSecureConfiguration() {
+    $config = $this->configuration;
+    if (!empty($_ENV['COMMERCE_VANTIV_API_USER'])) {
+      $config['user'] = $_ENV['COMMERCE_VANTIV_API_USER'];
+    }
+    if (!empty($_ENV['COMMERCE_VANTIV_API_PASS'])) {
+      $config['password'] = $_ENV['COMMERCE_VANTIV_API_PASS'];
+    }
+    if (!empty($_ENV['COMMERCE_VANTIV_API_MERCHANT_ID_DEFAULT'])) {
+      $config['currency_merchant_map']['default'] = $_ENV['COMMERCE_VANTIV_API_MERCHANT_ID_DEFAULT'];
+    }
+    if (!empty($_ENV['COMMERCE_VANTIV_API_PAYPAGE_ID'])) {
+      $config['paypage_id'] = $_ENV['COMMERCE_VANTIV_API_PAYPAGE_ID'];
+    }
+
+    return $config;
+  }
+
+  /**
    * {@inheritdoc}
    */
   public function buildConfigurationForm(array $form, FormStateInterface $form_state) {
     $form = parent::buildConfigurationForm($form, $form_state);
 
-    // Example credential. Also needs matching schema in
-    // config/schema/commerce_vantiv.schema.yml.
+    if (!isset($_ENV['COMMERCE_VANTIV_API_USER']) || !isset($_ENV['COMMERCE_VANTIV_API_PASS'])) {
+      drupal_set_message($this->t("Warning: API credentials should be set in environment variables, NOT stored in configuration."), 'warning');
+    }
+
     $form['user'] = [
       '#type' => 'textfield',
       '#title' => $this->t('User name'),
-      '#default_value' => $this->configuration['user'],
-      '#required' => TRUE
     ];
+    if (empty($_ENV['COMMERCE_VANTIV_API_USER'])) {
+      $form['user']['#default_value'] = $this->configuration['user'];
+      $form['user']['#description'] = $this->t('Warning: This value should be set in the COMMERCE_VANTIV_API_USER environment variable.');
+    }
+    else {
+      $form['user']['#attributes']['disabled'] = 'disabled';
+      $form['user']['#default_value'] = $_ENV['COMMERCE_VANTIV_API_USER'];
+      $form['user']['#description'] = $this->t('Note: This value is set in the COMMERCE_VANTIV_API_USER environment variable.');
+    }
     $form['password'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Password'),
-      '#default_value' => $this->configuration['password'],
-      '#required' => TRUE
     ];
+    if (empty($_ENV['COMMERCE_VANTIV_API_PASS'])) {
+      $form['password']['#default_value'] = $this->configuration['password'];
+      $form['password']['#description'] = $this->t('Warning: This value should be set in the COMMERCE_VANTIV_API_PASS environment variable.');
+    }
+    else {
+      $form['password']['#attributes']['disabled'] = 'disabled';
+      $form['password']['#default_value'] = $_ENV['COMMERCE_VANTIV_API_PASS'];
+      $form['password']['#description'] = $this->t('Note: This value is set in the COMMERCE_VANTIV_API_PASS environment variable.');
+    }
     $form['currency_merchant_map'] = [
       '#type' => 'fieldset',
       '#title' => $this->t('Currency -> Merchant ID mapping'),
@@ -104,9 +141,16 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
     $form['currency_merchant_map']['default'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Default'),
-      '#default_value' => $this->configuration['currency_merchant_map']['default'],
-      '#required' => TRUE
     ];
+    if (empty($_ENV['COMMERCE_VANTIV_API_MERCHANT_ID_DEFAULT'])) {
+      $form['currency_merchant_map']['default']['#default_value'] = $this->configuration['currency_merchant_map']['default'];
+      $form['currency_merchant_map']['default']['#description'] = $this->t('Warning: This value should be set in the COMMERCE_VANTIV_API_MERCHANT_ID_DEFAULT environment variable.');
+    }
+    else {
+      $form['currency_merchant_map']['default']['#attributes']['disabled'] = 'disabled';
+      $form['currency_merchant_map']['default']['#default_value'] = $_ENV['COMMERCE_VANTIV_API_MERCHANT_ID_DEFAULT'];
+      $form['currency_merchant_map']['default']['#description'] = $this->t('Note: This value is set in the COMMERCE_VANTIV_API_MERCHANT_ID_DEFAULT environment variable.');
+    }
     // @see UrlMapper.php in Litle Payments SDK where URL is determined
     // We should probably send transaction mode as one of the strings defined there.
     $form['url'] = [
@@ -123,8 +167,16 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
     $form['paypage_id'] = [
       '#type' => 'textfield',
       '#title' => $this->t('PayPage ID'),
-      '#default_value' => $this->configuration['paypage_id'],
     ];
+    if (empty($_ENV['COMMERCE_VANTIV_API_PAYPAGE_ID'])) {
+      $form['paypage_id']['#description'] = $this->t('Warning: This value should be set in the COMMERCE_VANTIV_API_PAYPAGE_ID environment variable.');
+      $form['paypage_id']['#default_value'] = $this->configuration['paypage_id'];
+    }
+    else {
+      $form['paypage_id']['#attributes']['disabled'] = 'disabled';
+      $form['paypage_id']['#description'] = $this->t('Note: This value is set in the COMMERCE_VANTIV_API_PAYPAGE_ID environment variable.');
+      $form['paypage_id']['#default_value'] = $_ENV['COMMERCE_VANTIV_API_PAYPAGE_ID'];
+    }
     $form['batch_requests_path'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Batch Requests Path'),
@@ -198,13 +250,24 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
     if (!$form_state->getErrors()) {
       $values = $form_state->getValue($form['#parents']);
       foreach ([
-        'user', 'password', 'url', 'proxy', 'paypage_id', 'batch_requests_path',
+        'url', 'proxy', 'batch_requests_path',
         'litle_requests_path', 'sftp_username', 'sftp_password',
         'batch_url', 'tcp_port', 'tcp_timeout', 'tcp_ssl', 'print_xml',
         'timeout', 'report_group'] as $value) {
         $this->configuration[$value] = $values[$value];
       }
-      $this->configuration['currency_merchant_map']['default'] = $values['currency_merchant_map']['default'];
+      if (empty($_ENV['COMMERCE_VANTIV_API_USER'])) {
+        $this->configuration['user'] = $values['user'];
+      }
+      if (empty($_ENV['COMMERCE_VANTIV_API_PASS'])) {
+        $this->configuration['password'] = $values['password'];
+      }
+      if (empty($_ENV['COMMERCE_VANTIV_API_MERCHANT_ID_DEFAULT'])) {
+        $this->configuration['currency_merchant_map']['default'] = $values['currency_merchant_map']['default'];
+      }
+      if (empty($_ENV['COMMERCE_VANTIV_API_PAYPAGE_ID'])) {
+        $this->configuration['paypage_id'] = $values['paypage_id'];
+      }
     }
   }
 
@@ -268,7 +331,7 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
     /** @var \Drupal\address\Plugin\Field\FieldType\AddressItem $billing_info */
     $billing_info = $profile->get('address')->first();
 
-    $hash_in = Helper::getApiRequestParamsFromConfig($this->configuration);
+    $hash_in = Helper::getApiRequestParamsFromConfig($this->getSecureConfiguration());
     $request_data = [
       'orderId' => $payment->getOrderId(),
       'amount'  => Helper::getVantivAmountFormat($amount->getNumber()),
@@ -334,7 +397,7 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
       return;
     }
 
-    $hash_in = Helper::getApiRequestParamsFromConfig($this->configuration);
+    $hash_in = Helper::getApiRequestParamsFromConfig($this->getSecureConfiguration());
     $request_data = [
       'id' => $payment->getAuthorizedTime(),
       'litleTxnId' => $payment->getRemoteId(),
@@ -369,7 +432,7 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
     $request_operation = "{$operation}Request";
     $response_operation = "{$operation}Response";
 
-    $hash_in = Helper::getApiRequestParamsFromConfig($this->configuration);
+    $hash_in = Helper::getApiRequestParamsFromConfig($this->getSecureConfiguration());
     $request_data = [
       'id' => $payment->getAuthorizedTime(),
       'litleTxnId' => $payment->getRemoteId(),
@@ -401,7 +464,7 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
       throw new InvalidRequestException(sprintf("Can't refund more than %s.", $balance->__toString()));
     }
 
-    $hash_in = Helper::getApiRequestParamsFromConfig($this->configuration);
+    $hash_in = Helper::getApiRequestParamsFromConfig($this->getSecureConfiguration());
     $request_data = [
       'id' => $payment->getAuthorizedTime(),
       'litleTxnId' => $payment->getRemoteId(),
@@ -474,7 +537,7 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
    *    The payment method.
    */
   private function registerToken(PaymentMethodInterface $payment_method) {
-    $hash_in = Helper::getApiRequestParamsFromConfig($this->configuration);
+    $hash_in = Helper::getApiRequestParamsFromConfig($this->getSecureConfiguration());
     /** @var ProfileInterface $billing_profile */
     $billing_profile = $payment_method->getBillingProfile();
     $request_data = [
