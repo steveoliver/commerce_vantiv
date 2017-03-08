@@ -78,10 +78,12 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
   }
 
   /**
-   * Gets configuration values combined with any set environment variables.
+   * {@inheritdoc}
    */
-  protected function getSecureConfiguration() {
+  public function getConfiguration() {
     $config = $this->configuration;
+
+    // Supplement configuration values with environment variables.
     if (!empty($_ENV['COMMERCE_VANTIV_API_USER'])) {
       $config['user'] = $_ENV['COMMERCE_VANTIV_API_USER'];
     }
@@ -331,7 +333,7 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
     /** @var \Drupal\address\Plugin\Field\FieldType\AddressItem $billing_info */
     $billing_info = $profile->get('address')->first();
 
-    $hash_in = Helper::getApiRequestParamsFromConfig($this->getSecureConfiguration());
+    $hash_in = Helper::getApiRequestParamsFromConfig($this->getConfiguration());
     $request_data = [
       'orderId' => $payment->getOrderId(),
       'amount'  => Helper::getVantivAmountFormat($amount->getNumber()),
@@ -397,7 +399,7 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
       return;
     }
 
-    $hash_in = Helper::getApiRequestParamsFromConfig($this->getSecureConfiguration());
+    $hash_in = Helper::getApiRequestParamsFromConfig($this->getConfiguration());
     $request_data = [
       'id' => $payment->getAuthorizedTime(),
       'litleTxnId' => $payment->getRemoteId(),
@@ -432,7 +434,7 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
     $request_operation = "{$operation}Request";
     $response_operation = "{$operation}Response";
 
-    $hash_in = Helper::getApiRequestParamsFromConfig($this->getSecureConfiguration());
+    $hash_in = Helper::getApiRequestParamsFromConfig($this->getConfiguration());
     $request_data = [
       'id' => $payment->getAuthorizedTime(),
       'litleTxnId' => $payment->getRemoteId(),
@@ -464,7 +466,7 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
       throw new InvalidRequestException(sprintf("Can't refund more than %s.", $balance->__toString()));
     }
 
-    $hash_in = Helper::getApiRequestParamsFromConfig($this->getSecureConfiguration());
+    $hash_in = Helper::getApiRequestParamsFromConfig($this->getConfiguration());
     $request_data = [
       'id' => $payment->getAuthorizedTime(),
       'litleTxnId' => $payment->getRemoteId(),
@@ -537,7 +539,7 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
    *    The payment method.
    */
   private function registerToken(PaymentMethodInterface $payment_method) {
-    $hash_in = Helper::getApiRequestParamsFromConfig($this->getSecureConfiguration());
+    $hash_in = Helper::getApiRequestParamsFromConfig($this->getConfiguration());
     /** @var ProfileInterface $billing_profile */
     $billing_profile = $payment_method->getBillingProfile();
     $request_data = [
