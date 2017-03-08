@@ -313,7 +313,7 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
    */
   public function createPayment(PaymentInterface $payment, $capture = TRUE) {
     if ($payment->getState()->value != 'new') {
-      throw new \InvalidArgumentExcpetion('The provided payment method is in an invalid state.');
+      throw new \InvalidArgumentException('The provided payment method is in an invalid state.');
     }
     /** @var \Drupal\commerce_payment\Entity\PaymentMethod $payment_method */
     $payment_method = $payment->getPaymentMethod();
