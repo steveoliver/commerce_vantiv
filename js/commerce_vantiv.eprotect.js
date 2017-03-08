@@ -19,7 +19,7 @@
    */
   Drupal.behaviors.vantivCreditCardEprotect = {
     attach: function (context, settings) {
-      if (context.firstChild.nodeName != 'html') {
+      if (context.firstElementChild.nodeName.toLowerCase() != 'html') {
         return false;
       }
       settings = settings.commerce_vantiv.eprotect;
