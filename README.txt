@@ -19,14 +19,15 @@ This module requires the following modules:
   * Views (https://www.drupal.org/project/views)
   * Rules (https://www.drupal.org/project/rules)
   * Entity (https://www.drupal.org/project/entity)
-  
+  * Vantiv/Litle SDK Library (https://github.com/LitleCo/litle-sdk-for-php)
+
 RECOMMENDED MODULES
--------------------  
+-------------------
   * Commerce Card on file (https://www.drupal.org/project/commerce_cardonfile):
-    If card on file functionality will be used card on file module 
+    If card on file functionality will be used card on file module
     should be installed.
   * Commerce Recurring(https://www.drupal.org/project/commerce_recurring)
-  * Commerce Price (https://www.drupal.org/project/commerce): 
+  * Commerce Price (https://www.drupal.org/project/commerce):
     Will allow adding price field to products.
   * Commerce Product (https://www.drupal.org/project/commerce):
     Allows you to create products in your eCommerce site.
@@ -34,8 +35,7 @@ RECOMMENDED MODULES
     Allows you to access the admin UI of the commerce_product module.
   * Commerce Product Pricing (https://www.drupal.org/project/commerce):
     Provides price management.
-  * Commerce Product Reference (https://www.drupal.org
-/project/commerce):
+  * Commerce Product Reference (https://www.drupal.org/project/commerce):
     Provides the possibility of creating a node that will reference a
     product.
 
@@ -43,13 +43,15 @@ INSTALATION
 -----------------
 
 1.  Download the module commerce_vantive from: https://www.drupal.org/project/commerce_vantiv
-2.  Place the module in your_site/sites/all/modules/
-3.  Enable the module from your_site/admin/modules
-4.  If you don’t have an account and credentials for vantiv please visit:
-http://www.vantiv.com/ and sign up.
-5.  After that go to your_site/store/payment_methods
-6.  Enable the vantiv payment method and edit the rule.
-7.  Enter your credentials for USER ID, Merchant ID and Password.
+2.  Place the module in /sites/all/modules/
+3.  Place the Vantiv/Litle library in /sites/all/libraries.
+    Structure should resemble /sites/all/libraries/litle/litle/sdk/(files_here)
+4.  Enable the module from /admin/modules
+5.  If you don't have an account and credentials for vantiv please visit:
+    http://www.vantiv.com/ and sign up.
+6.  After that go to /store/payment_methods
+7.  Enable the vantiv payment method and edit the rule.
+8.  Enter your credentials for USER ID, Merchant ID and Password.
 
 
 
