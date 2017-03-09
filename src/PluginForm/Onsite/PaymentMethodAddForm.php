@@ -103,7 +103,8 @@ class PaymentMethodAddForm extends BasePaymentMethodAddForm {
       'payment_pane' => TRUE,
       'paypage_url' => VantivApiHelper::getPaypageRequestUrl($plugin)
     ];
-    $element['#attached']['library'][] = 'commerce_vantiv/eprotect.library.prelive';
+    $mode = $plugin->getMode() == 'live' ? 'live' : 'prelive';
+    $element['#attached']['library'][] = 'commerce_vantiv/eprotect.library.' . $mode;
     $element['#attached']['library'][] = 'commerce_vantiv/eprotect.client';
 
     // Add hidden response fields for storing information returned by Vantiv.

@@ -10,7 +10,7 @@ use litle\sdk\XmlParser as LitleXmlParser;
 class VantivApiHelper {
 
   /**
-   * Gets the PayPage request URL given the current payment method.
+   * Gets the PayPage request URL given the current payment method plugin.
    *
    * @param \Drupal\commerce_vantiv\Plugin\Commerce\PaymentGateway\OnsiteInterface $plugin
    *   The payment gateway plugin.
@@ -19,13 +19,11 @@ class VantivApiHelper {
    *   The URL to the PayPage/eProtect endpoint.
    */
   public static function getPaypageRequestUrl(OnsiteInterface $plugin) {
-    // @todo Consider Certification / Pre-Live / Post-Live Vantiv environments.
-    // @see https://github.com/steveoliver/commerce_vantiv/issues/2
-    if ($plugin->getMode() == 'test') {
-      return 'https://request-prelive.np-securepaypage-litle.com';
+    if ($plugin->getMode() == 'live') {
+      return 'https://request.securepaypage-litle.com';
     }
     else {
-      return 'https://request.np-securepaypage-litle.com';
+      return 'https://request-prelive.np-securepaypage-litle.com';
     }
   }
 
@@ -173,6 +171,8 @@ class VantivApiHelper {
     $config['merchantId'] = $config['currency_merchant_map']['default'];
     unset($config['report_group']);
     unset($config['currency_merchant_map']);
+
+    $config['url'] = $config['mode'] == 'live' ? 'https://payments.litle.com/vap/communicator/online' : 'https://prelive.litle.com/vap/communicator/online';
 
     return $config;
   }

@@ -58,7 +58,6 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
       'currency_merchant_map' => [
         'default' => ''
       ],
-      'url' => '',
       'proxy' => '',
       'paypage_id' => '',
       'batch_requests_path' => '',
@@ -153,14 +152,6 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
       $form['currency_merchant_map']['default']['#default_value'] = $_ENV['COMMERCE_VANTIV_API_MERCHANT_ID_DEFAULT'];
       $form['currency_merchant_map']['default']['#description'] = $this->t('Note: This value is set in the COMMERCE_VANTIV_API_MERCHANT_ID_DEFAULT environment variable.');
     }
-    // @see UrlMapper.php in Litle Payments SDK where URL is determined
-    // We should probably send transaction mode as one of the strings defined there.
-    $form['url'] = [
-      '#type' => 'textfield',
-      '#title' => $this->t('URL'),
-      '#default_value' => $this->configuration['url'],
-      '#required' => TRUE
-    ];
     $form['proxy'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Proxy'),
@@ -252,7 +243,7 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
     if (!$form_state->getErrors()) {
       $values = $form_state->getValue($form['#parents']);
       foreach ([
-        'url', 'proxy', 'batch_requests_path',
+        'proxy', 'batch_requests_path',
         'litle_requests_path', 'sftp_username', 'sftp_password',
         'batch_url', 'tcp_port', 'tcp_timeout', 'tcp_ssl', 'print_xml',
         'timeout', 'report_group'] as $value) {
