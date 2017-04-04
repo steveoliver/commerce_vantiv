@@ -15,6 +15,16 @@ class PaymentMethodAddForm extends BasePaymentMethodAddForm {
   /**
    * {@inheritdoc}
    */
+  public function buildConfigurationForm(array $form, FormStateInterface $form_state) {
+    $form = parent::buildConfigurationForm($form, $form_state);
+    $form['billing_information']['#weight'] = -100;
+
+    return $form;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function validateCreditCardForm(array &$element, FormStateInterface $form_state) {
     // @todo Do not validate if ajax
     $triggering_element = $form_state->getTriggeringElement();
