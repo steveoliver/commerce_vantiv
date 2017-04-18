@@ -54,13 +54,7 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
    */
   public function defaultConfiguration() {
     return [
-      'user' => '',
-      'password' => '',
-      'currency_merchant_map' => [
-        'default' => ''
-      ],
       'proxy' => '',
-      'paypage_id' => '',
       'batch_requests_path' => '',
       'litle_requests_path' => '',
       'sftp_username' => '',
