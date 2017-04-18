@@ -23,8 +23,14 @@ class PaymentMethodAddForm extends BasePaymentMethodAddForm {
     }
     $post_values = \Drupal::request()->request->all();
     $values = NestedArray::getValue($post_values, $element['#parents']);
-    $vantiv_card_type = $values['response$type'];
+    $vantiv_card_type = $values['vantivResponseType'];
     $commerce_card_type = VantivApiHelper::getCommerceCreditCardType($vantiv_card_type);
+    if (!$commerce_card_type) {
+      // (if values doesn't have response$type).
+      // (seems to happen when adding a new credit card when one already exists).
+      $form_state->setError($element['number'], t('Invalid credit card type.'));
+      return;
+    }
     $card_type = CreditCard::getType($commerce_card_type);
     if (!$card_type) {
       $form_state->setError($element['number'], t('You have entered a credit card number of an unsupported card type.'));
@@ -44,11 +50,11 @@ class PaymentMethodAddForm extends BasePaymentMethodAddForm {
     $payment_method = $this->entity;
     $post_values = \Drupal::request()->request->all();
     $values = NestedArray::getValue($post_values, $element['#parents']);
-    $payment_method->card_type = VantivApiHelper::getCommerceCreditCardType($values['response$type']);
-    $payment_method->card_number = $values['response$lastFour'];
+    $payment_method->card_type = VantivApiHelper::getCommerceCreditCardType($values['vantivResponseType']);
+    $payment_method->card_number = $values['vantivResponseLastFour'];
     $payment_method->card_exp_month = $values['expiration']['month'];
     $payment_method->card_exp_year = $values['expiration']['year'];
-    $payment_method->setRemoteId($values['response$paypageRegistrationId']);
+    $payment_method->setRemoteId($values['vantivResponsePaypageRegistrationId']);
     $payment_method->save();
   }
 
@@ -78,46 +84,47 @@ class PaymentMethodAddForm extends BasePaymentMethodAddForm {
       $credit_card_field['#post_render'][] = [$this, 'removeFormElementName'];
     }
 
-    // Add our hidden value fields.
-    $element['request$paypageId'] = [
+    // Add our hidden request value fields.
+    $element['vantivRequestPaypageId'] = [
       '#type' => 'hidden',
-      '#attributes' => ['id' => 'request$paypageId'],
+      '#attributes' => ['id' => 'vantivRequestPaypageId'],
       '#value' => $configuration['paypage_id']
     ];
-    $element['request$merchantTxnId'] = [
+    $element['vantivRequestMerchantTxnId'] = [
       '#type' => 'hidden',
-      '#attributes' => ['id' => 'request$merchantTxnId'],
+      '#attributes' => ['id' => 'vantivRequestMerchantTxnId'],
       '#value' => $configuration['currency_merchant_map']['default']
     ];
-    $element['request$orderId'] = [
+    $element['vantivRequestOrderId'] = [
       '#type' => 'hidden',
-      '#attributes' => ['id' => 'request$orderId'],
+      '#attributes' => ['id' => 'vantivRequestOrderId'],
       '#value' => (!empty($order) && isset($order->order_id)) ? $order->order_id : 0
     ];
-    $element['request$reportGroup'] = [
+    $element['vantivRequestReportGroup'] = [
       '#type' => 'hidden',
-      '#attributes' => ['id' => 'request$reportGroup'],
+      '#attributes' => ['id' => 'vantivRequestReportGroup'],
       '#value' => $configuration['report_group'],
     ];
+
+    // Add values to drupalSettings that help load the correct external library
+    // and tailor the eProtect functionality to whichever payment method form
+    // we are working with (either user card on file or checkout new payment).
     $element['#attached']['drupalSettings']['commerce_vantiv']['eprotect'] = [
-      'payment_pane' => TRUE,
-      'paypage_url' => VantivApiHelper::getPaypageRequestUrl($plugin)
+      'mode' => $plugin->getMode() == 'live' ? 'live' : 'prelive',
+      'checkout_pane' => TRUE,
     ];
-    $mode = $plugin->getMode() == 'live' ? 'live' : 'prelive';
-    $element['#attached']['library'][] = 'commerce_vantiv/eprotect.library.' . $mode;
-    $element['#attached']['library'][] = 'commerce_vantiv/eprotect.client';
 
     // Add hidden response fields for storing information returned by Vantiv.
     foreach([
-      'response$paypageRegistrationId',
-      'response$bin',
-      'response$code',
-      'response$message',
-      'response$responseTime',
-      'response$type',
-      'response$litleTxnId',
-      'response$firstSix',
-      'response$lastFour'
+      'vantivResponsePaypageRegistrationId',
+      'vantivResponseBin',
+      'vantivResponseCode',
+      'vantivResponseMessage',
+      'vantivResponseTime',
+      'vantivResponseType',
+      'vantivResponseLitleTxnId',
+      'vantivResponseFirstSix',
+      'vantivResponseLastFour'
     ] as $eprotectfield) {
       $element[$eprotectfield] = [
         '#type' => 'hidden',

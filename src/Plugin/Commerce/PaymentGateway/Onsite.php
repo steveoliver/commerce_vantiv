@@ -33,6 +33,7 @@ use litle\sdk\LitleOnlineRequest;
  *   credit_card_types = {
  *     "amex", "discover", "mastercard", "visa",
  *   },
+ *   js_library = "commerce_vantiv/eprotect"
  * )
  */
 class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
@@ -490,7 +491,7 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
    */
   public function createPaymentMethod(PaymentMethodInterface $payment_method, array $payment_details) {
     $required_keys = [
-      'response$type', 'response$paypageRegistrationId', 'expiration',
+      'vantivResponseType', 'vantivResponsePaypageRegistrationId', 'expiration',
     ];
     foreach ($required_keys as $required_key) {
       if (empty($payment_details[$required_key])) {
@@ -499,11 +500,11 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
     }
 
     $expires = CreditCard::calculateExpirationTimestamp($payment_details['expiration']['month'], $payment_details['expiration']['year']);
-    $payment_method->card_type = Helper::getCommerceCreditCardType($payment_details['response$type']);
-    $payment_method->card_number = $payment_details['response$lastFour'];
+    $payment_method->card_type = Helper::getCommerceCreditCardType($payment_details['vantivResponseType']);
+    $payment_method->card_number = $payment_details['vantivResponseLastFour'];
     $payment_method->card_exp_month = $payment_details['expiration']['month'];
     $payment_method->card_exp_year = $payment_details['expiration']['year'];
-    $payment_method->setRemoteId($payment_details['response$paypageRegistrationId']);
+    $payment_method->setRemoteId($payment_details['vantivResponsePaypageRegistrationId']);
     $payment_method->setExpiresTime($expires);
     if ($payment_method->getOwnerId() == 0) {
       $payment_method->setReusable(FALSE);

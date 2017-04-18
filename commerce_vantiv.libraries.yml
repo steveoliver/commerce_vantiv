@@ -12,7 +12,7 @@ eprotect.library.live:
   dependencies:
     - core/jquery
 
-eprotect.client:
+eprotect:
   version: VERSION
   js:
     js/commerce_vantiv.eprotect.js: { scope: footer }

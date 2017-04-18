@@ -10,24 +10,6 @@ use litle\sdk\XmlParser as LitleXmlParser;
 class VantivApiHelper {
 
   /**
-   * Gets the PayPage request URL given the current payment method plugin.
-   *
-   * @param \Drupal\commerce_vantiv\Plugin\Commerce\PaymentGateway\OnsiteInterface $plugin
-   *   The payment gateway plugin.
-   *
-   * @return string
-   *   The URL to the PayPage/eProtect endpoint.
-   */
-  public static function getPaypageRequestUrl(OnsiteInterface $plugin) {
-    if ($plugin->getMode() == 'live') {
-      return 'https://request.securepaypage-litle.com';
-    }
-    else {
-      return 'https://request-prelive.np-securepaypage-litle.com';
-    }
-  }
-
-  /**
    * Gets authorization transaction expiration timestamp.
    *
    * @param \Drupal\commerce_payment\Entity\PaymentInterface $payment

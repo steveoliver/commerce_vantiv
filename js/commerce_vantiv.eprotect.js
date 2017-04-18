@@ -19,18 +19,32 @@
    */
   Drupal.behaviors.vantivCreditCardEprotect = {
     attach: function (context, settings) {
-      if (context.firstElementChild.nodeName.toLowerCase() != 'html') {
-        return false;
+
+      // Load eProtect functionality if settings exist and is not already loaded.
+      if (settings.commerce_vantiv && !window.vantivSubmitButtonBound) {
+
+        // Get only the settings we will use.
+        settings = settings.commerce_vantiv.eprotect;
+
+        // Load the eProtect library since we can't load it via an #attached
+        // library on the payment form.
+        Drupal.vantivEprotect.load(settings);
+
+        // Customize the submit button functionality for each form.
+        var buttonId = Drupal.vantivEprotect.getSubmitButtonSelector(settings);
+        Drupal.vantivEprotect.delegateSubmitButton(buttonId, settings);
       }
-      settings = settings.commerce_vantiv.eprotect;
-      if (!Drupal.vantivEprotect.isPayPageLibraryLoaded()) {
-        alert('Vantiv e-Protect error (Litle PayPage library unavailable).');
-        return false;
-      }
-      var buttonId = Drupal.vantivEprotect.getSubmitButtonID(settings);
-      Drupal.vantivEprotect.delegateSubmitButton(buttonId, settings);
     }
   };
+
+  /**
+   * @typedef {object} Drupal~settings~vantivSettings
+   *
+   * @prop {string} mode
+   *   The payment gateway transaction environment, either 'live' or 'prelive'.
+   * @prop {boolean} checkout_pane
+   *   TRUE if operating on a Checkout 'new payment method' form.
+   */
 
   /**
    * Namespace for the Vantiv eProtect functionality.
@@ -45,28 +59,26 @@
     timeout: 15000,
 
     /**
-     * Ensures the global LitlePayPage library is loaded.
+     * Loads the external Litle PayPage (eProtect) library script for the current transaction mode.
      *
-     * @returns {boolean}
+     * @param {Drupal.settings.vantivSettings} settings
      */
-    isPayPageLibraryLoaded: function() {
-      if (typeof LitlePayPage !== 'function') {
-        alert('We are experiencing technical difficulties. Please try again later or call 555-555-1212 (API unavailable)');
-        return false;
+    load: function(settings) {
+      if ((typeof LitlePayPage === 'function')) {
+        return;
       }
-
-      return true;
+      $.getScript(Drupal.vantivEprotect.getPayPageHost(settings) + '/LitlePayPage/litle-api2.js');
     },
 
     /**
-     * Gets the URL to which PayPage requests are sent.
+     * Gets the PayPage host for the given transaction mode.
      *
      * @param {Drupal.settings.vantivSettings} settings
      *
-     * @returns {string}
+     * @returns {string} URL of the eProtect host without a trailing slash.
      */
-    getPayPageRequestUrl: function(settings) {
-      return settings.paypage_url;
+    getPayPageHost: function(settings) {
+      return (settings.mode == 'live') ? 'https://request.securepaypage-litle.com' : 'https://request-prelive.np-securepaypage-litle.com';
     },
 
     /**
@@ -74,9 +86,9 @@
      *
      * @param {Drupal.settings.vantivSettings} settings Vantiv settings.
      *
-     * @returns {string} HTML ID of the submit button to control.
+     * @returns {string} jQuery selector for the submit button to control.
      */
-    getSubmitButtonID: function(settings) {
+    getSubmitButtonSelector: function(settings) {
       // @todo Determine correct and stable ids to target.
       // Checkout pane vs. Payment pane .. what's the diff?
       var id = settings.checkout_pane ? '#edit-actions #edit-actions-next' : '#edit-actions #edit-actions-next';
@@ -96,29 +108,21 @@
      * @returns {object} HTML field elements keyed by Vantiv request keys.
      */
     getCommerceFormFields: function(settings) {
+
+      // Some form fields will always be the same.
+      var formFields = {
+        'paypageRegistrationId': $('#vantivResponsePaypageRegistrationId').get(0),
+        'bin': $('#vantivResponseBin').get(0)
+      };
+
+      // Some form fields will change based on which form they are a part of.
       if (settings.checkout_pane) {
-        var formFields = {
-          "accountNum": document.getElementById("edit-commerce-payment-payment-details-credit-card-number"),
-          "cvv2": document.getElementById("edit-commerce-payment-payment-details-credit-card-code"),
-          "paypageRegistrationId": document.getElementById("response$paypageRegistrationId"),
-          "bin": document.getElementById("response$bin")
-        };
-      }
-      else if (settings.payment_pane) {
-        var formFields = {
-          'accountNum': document.getElementById('edit-payment-information-add-payment-method-payment-details-number'),
-          'cvv2': document.getElementById('edit-payment-information-add-payment-method-payment-details-security-code'),
-          'paypageRegistrationId': document.getElementById('response$paypageRegistrationId'),
-          'bin': document.getElementById('response$bin')
-        };
+        formFields.accountNum = $('[data-drupal-selector="edit-payment-information-add-payment-method-payment-details-number"]').get(0);
+        formFields.cvv2 = $('[data-drupal-selector="edit-payment-information-add-payment-method-payment-details-security-code"]').get(0);
       }
       else if (settings.cardonfile_form) {
-        var formFields = {
-          "accountNum": document.getElementById("edit-credit-card-number"),
-          "cvv2": document.getElementById("edit-credit-card-code"),
-          "paypageRegistrationId": document.getElementById("response$paypageRegistrationId"),
-          "bin": document.getElementById("response$bin")
-        };
+        formFields.accountNum = $('[data-drupal-selector="edit-payment-method-payment-details-number"]').get(0);
+        formFields.cvv2 = $('[data-drupal-selector="edit-payment-method-payment-details-security-code"]').get(0);
       }
 
       return formFields;
@@ -127,23 +131,23 @@
     /**
      * Sets hidden form values based on API response.
      *
-     * @param response
+     * @param {object} response
      */
     setLitleResponseFields: function(response) {
-      document.getElementById('response$code').value = response.response || '';
-      document.getElementById('response$message').value = response.message || '';
-      document.getElementById('response$responseTime').value = response.responseTime || '';
-      document.getElementById('response$litleTxnId').value = response.litleTxnId || '';
-      document.getElementById('response$type').value = response.type || '';
-      document.getElementById('response$firstSix').value = response.firstSix || '';
-      document.getElementById('response$lastFour').value = response.lastFour || '';
+      $('#vantivResponseCode').val(response.response);
+      $('#vantivResponseMessage').val(response.message);
+      $('#vantivResponseTime').val(response.responseTime);
+      $('#vantivResponseLitleTxnId').val(response.litleTxnId);
+      $('#vantivResponseType').val(response.type);
+      $('#vantivResponseFirstSix').val(response.firstSix);
+      $('#vantivResponseLastFour').val(response.lastFour);
     },
 
     /**
      * Timeout callback.
      */
     timeoutOnLitle: function() {
-      alert('We are experiencing technical difficulties. Please try again later call 555-555-1212 (timeout)');
+      alert('We are experiencing technical difficulties (timeout). Please try again later.');
     },
 
     /**
@@ -167,7 +171,7 @@
         alert('Invalid card number. Check and retry. (Not a number)');
       }
       else if (response.response == '875') {
-        alert('We are experiencing technical difficulties. Please try again later or call 555-555-1212');
+        alert('We are experiencing technical difficulties. Please try again later.');
       }
       else if (response.response == '876') {
         alert('Invalid card number. Check and retry. (Failure from Server)');
@@ -182,19 +186,27 @@
         alert('Invalid card validation code. Check and retry. (Too long)');
       }
       else if (response.response == '889') {
-        alert('We are experiencing technical difficulties. Please try again later or call 555-555-1212');
+        alert('We are experiencing technical difficulties. Please try again later.');
       }
 
       return false;
     },
 
+    /**
+     * Gets a request object from the fields of the current payment form.
+     *
+     * @param {Drupal~settings~vantivSettings} settings
+     *
+     * @return {object}
+     *   An object with the properties of the request required when calling Vantiv.
+     */
     getRequest: function(settings) {
       return {
-        'paypageId': document.getElementById('request$paypageId').value,
-        'reportGroup': document.getElementById('request$reportGroup').value,
-        'orderId': document.getElementById('request$orderId').value,
-        'id': document.getElementById('request$merchantTxnId').value,
-        'url': Drupal.vantivEprotect.getPayPageRequestUrl(settings)
+        paypageId: $('#vantivRequestPaypageId').val(),
+        reportGroup: $('#vantivRequestMerchantTxnId').val(),
+        orderId: $('#vantivRequestOrderId').val(),
+        id: $('#vantivRequestReportGroup').val(),
+        url: Drupal.vantivEprotect.getPayPageHost(settings)
       };
     },
 
@@ -205,13 +217,25 @@
      * @param {Drupal.settings.vantivSettings} settings
      */
     delegateSubmitButton: function(submitButtonId, settings) {
+
+      // Leave the submit button alone if we've already bound our logic.
+      if (window.vantivSubmitButtonBound) {
+        return;
+      }
+
+      // Bind our custom submit button functionality.
       $(submitButtonId).bind('click', {
         settings: settings
       }, function(event, passthru) {
+
+        // Get settings for this closure from the parent scope.
         var settings = event.data.settings;
+
+        // Use the default (Drupal) behaviour if we've already successfully submitted to Vantiv.
         if (passthru) {
           return true;
         }
+
         var submitButton = event.currentTarget;
 
         // Clear Litle response fields.
@@ -219,9 +243,14 @@
 
         // Build the custom success callback.
         var onSuccess = function(response) {
+
+          // Set the transaction/token values from Vantiv in our hidden form fields.
           Drupal.vantivEprotect.setLitleResponseFields(response);
+
           // @todo: Test expiration date here to avoid trip to Drupal
           // since all other payment fields are handled client-side.
+
+          // Trigger this submit handler again using the passthru flag.
           $(submitButton).trigger('click', true);
         };
 
@@ -239,7 +268,10 @@
         // Prevent further regular form submit handling.
         return false;
       });
+
+      window.vantivSubmitButtonBound = true;
     }
+
   }
 
 })(jQuery, Drupal);
