@@ -5,7 +5,6 @@ namespace Drupal\commerce_vantiv\Plugin\Commerce\PaymentGateway;
 use Drupal\commerce_payment\CreditCard;
 use Drupal\commerce_payment\Entity\PaymentInterface;
 use Drupal\commerce_payment\Entity\PaymentMethodInterface;
-use Drupal\commerce_payment\Exception\HardDeclineException;
 use Drupal\commerce_payment\Exception\InvalidRequestException;
 use Drupal\commerce_payment\Exception\SoftDeclineException;
 use Drupal\commerce_payment\PaymentMethodTypeManager;
@@ -13,6 +12,7 @@ use Drupal\commerce_payment\PaymentTypeManager;
 use Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\OnsitePaymentGatewayBase;
 use Drupal\commerce_price\Price;
 use Drupal\commerce_vantiv\VantivApiHelper as Helper;
+use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Logger\RfcLogLevel;
@@ -44,8 +44,9 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
   /**
    * {@inheritdoc}
    */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, PaymentTypeManager $payment_type_manager, PaymentMethodTypeManager $payment_method_type_manager) {
-    parent::__construct($configuration, $plugin_id, $plugin_definition, $entity_type_manager, $payment_type_manager, $payment_method_type_manager);
+  public function __construct(array $configuration, $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, PaymentTypeManager $payment_type_manager, PaymentMethodTypeManager $payment_method_type_manager, TimeInterface $time) {
+    parent::__construct($configuration, $plugin_id, $plugin_definition, $entity_type_manager, $payment_type_manager, $payment_method_type_manager, $time);
+
     $this->api = new LitleOnlineRequest();
   }
 
@@ -267,30 +268,28 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
    */
   public function buildPaymentOperations(PaymentInterface $payment) {
     $state = $payment->getState()->value;
-    $txn_time = (strpos($state, 'capture') === 0) ? $payment->getCapturedTime() : $payment->getAuthorizedTime();
+    $txn_time = $payment->getCompletedTime() ? $payment->getCompletedTime() : $payment->getAuthorizedTime();
     $txn_remote_complete = time() > 60 + $txn_time;
     $txn_same_day = (strtotime('today') < $txn_time && $txn_time < (strtotime('tomorrow') - 1));
-    $auth_expired = ($state != 'authorization') ? TRUE : $payment->getAuthorizationExpiresTime() <= time();
     $operations = [];
     if ($txn_remote_complete) {
       $operations['capture'] = [
         'title' => $this->t('Capture'),
         'page_title' => $this->t('Capture payment'),
         'plugin_form' => 'capture-payment',
-        'access' => ($state == 'authorization' && $auth_expired === FALSE),
+        'access' => ($state == 'authorization' && !$payment->isExpired()),
       ];
       $operations['void'] = [
         'title' => $this->t('Void'),
         'page_title' => $this->t('Void payment'),
         'plugin_form' => 'void-payment',
-        'access' => (($state == 'authorization' && $auth_expired === FALSE) || ($state == 'capture_completed' && $txn_same_day) || ($state == 'capture_refunded' && $txn_same_day)
-        ),
+        'access' => ($state == 'authorization' && !$payment->isExpired()) || (in_array($state, ['completed', 'refunded']) && $txn_same_day),
       ];
       $operations['refund'] = [
         'title' => $this->t('Refund'),
         'page_title' => $this->t('Refund payment'),
         'plugin_form' => 'refund-payment',
-        'access' => in_array($state, ['capture_completed', 'capture_partially_refunded']),
+        'access' => in_array($state, ['completed', 'partially_refunded']),
       ];
     }
 
@@ -301,17 +300,9 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
    * {@inheritdoc}
    */
   public function createPayment(PaymentInterface $payment, $capture = TRUE) {
-    if ($payment->getState()->value != 'new') {
-      throw new \InvalidArgumentException('The provided payment method is in an invalid state.');
-    }
-    /** @var \Drupal\commerce_payment\Entity\PaymentMethod $payment_method */
+    $this->assertPaymentState($payment, ['new']);
     $payment_method = $payment->getPaymentMethod();
-    if (empty($payment_method)) {
-      throw new \InvalidArgumentException('The provided payment method has no payment method referenced.');
-    }
-    if (REQUEST_TIME >= $payment_method->getExpiresTime()) {
-      throw new HardDeclineException('The provided payment method has expired.');
-    }
+    $this->assertPaymentMethod($payment_method);
 
     /** @var \Drupal\commerce_price\Price $amount */
     $amount = $payment->getAmount();
@@ -351,16 +342,12 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
     $response_array = Helper::getResponseArray($response, $response_property);
 
     $this->ensureSuccessTransaction($response_array, 'Payment');
+    $next_state = $capture ? 'completed' : 'authorization';
 
-    $payment->state = $capture ? 'capture_completed' : 'authorization';
-    $payment->setTest($this->getMode() == 'test');
+    $payment->setState($next_state);
     $payment->setRemoteId($response_array['litleTxnId']);
-    $payment->setAuthorizedTime(REQUEST_TIME);
-    if ($capture) {
-      $payment->setCapturedTime(REQUEST_TIME);
-    }
-    else {
-      $payment->setAuthorizationExpiresTime(Helper::getAuthorizationExpiresTime($payment));
+    if (!$capture) {
+      $payment->setExpiresTime(Helper::getAuthorizationExpiresTime($payment));
     }
     $payment->save();
   }
@@ -369,9 +356,7 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
    * {@inheritdoc}
    */
   public function capturePayment(PaymentInterface $payment, Price $amount = NULL) {
-    if ($payment->getState()->value != 'authorization') {
-      throw new \InvalidArgumentException('Only authorizations can be captured.');
-    }
+    $this->assertPaymentState($payment, ['authorization']);
     /** @var Price $capture_amount */
     $capture_amount = $amount ?: $payment->getBalance();
     if ($capture_amount->lessThan($payment->getBalance())) {
@@ -381,7 +366,7 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
       $partial_capture->setAmount($capture_amount);
       $partial_capture->setRemoteId($payment->getRemoteId());
       $this->capturePayment($partial_capture, $capture_amount);
-      if ($partial_capture->getCapturedTime()) {
+      if ($partial_capture->getCompletedTime()) {
         $payment->setAmount($payment->getAmount()->subtract($partial_capture->getAmount()));
         $payment->save();
       }
@@ -409,8 +394,7 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
 
     $payment->setRemoteId($response_array['litleTxnId']);
     $payment->setAmount($capture_amount);
-    $payment->setCapturedTime(REQUEST_TIME);
-    $payment->state = 'capture_completed';
+    $payment->setState('completed');
     $payment->save();
   }
 
@@ -436,9 +420,10 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
     $response_array = Helper::getResponseArray($response, $response_operation);
 
     $this->ensureSuccessTransaction($response_array, $operation);
+    $next_state = $state == 'authorization' ? 'authorization_voided' : 'refunded';
 
     $payment->setRemoteId($response_array['litleTxnId']);
-    $payment->state = $state == 'capture' ? 'capture_refunded' : 'authorization_voided';
+    $payment->setState($next_state);
     $payment->save();
   }
 
@@ -446,14 +431,10 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
    * {@inheritdoc}
    */
   public function refundPayment(PaymentInterface $payment, Price $amount = NULL) {
-    if (!in_array($payment->getState()->value, ['capture_completed', 'capture_partially_refunded'])) {
-      throw new \InvalidArgumentException('Only payments in the "capture_completed" and "capture_partially_refunded" states can be refunded.');
-    }
+    $this->assertPaymentState($payment, ['completed', 'partially_refunded']);
+    // If not specified, refund the entire amount.
     $amount = $amount ?: $payment->getAmount();
-    $balance = $payment->getBalance();
-    if ($amount->greaterThan($balance)) {
-      throw new InvalidRequestException(sprintf("Can't refund more than %s.", $balance->__toString()));
-    }
+    $this->assertRefundAmount($payment, $amount);
 
     $hash_in = Helper::getApiRequestParamsFromConfig($this->getSecureConfiguration());
     $request_data = [
@@ -473,10 +454,10 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
     $old_refunded_amount = $payment->getRefundedAmount();
     $new_refunded_amount = $old_refunded_amount->add($amount);
     if ($new_refunded_amount->lessThan($payment->getAmount())) {
-      $payment->state = 'capture_partially_refunded';
+      $payment->setState('partially_refunded');
     }
     else {
-      $payment->state = 'capture_refunded';
+      $payment->setState('refunded');
     }
 
     $payment->setRefundedAmount($new_refunded_amount);

@@ -3,8 +3,7 @@
 namespace Drupal\commerce_vantiv;
 
 use Drupal\commerce_payment\Entity\PaymentInterface;
-use Drupal\commerce_payment\Entity\PaymentMethod;
-use Drupal\commerce_vantiv\Plugin\Commerce\PaymentGateway\OnsiteInterface;
+use Drupal\commerce_payment\Entity\PaymentMethodInterface;
 use litle\sdk\XmlParser as LitleXmlParser;
 
 class VantivApiHelper {
@@ -51,13 +50,13 @@ class VantivApiHelper {
   /**
    * Gets a Vantiv formatted credit card expiration date.
    *
-   * @param PaymentMethod $payment_method
-   *   Payment method object.
+   * @param \Drupal\commerce_payment\Entity\PaymentMethodInterface $payment_method
+   *   The payment method.
    *
    * @return string
    *   Credit card expiration date formatted 'MMYY'.
    */
-  public static function getVantivCreditCardExpDate(PaymentMethod $payment_method) {
+  public static function getVantivCreditCardExpDate(PaymentMethodInterface $payment_method) {
     $month = $payment_method->get('card_exp_month')->value;
     $year = $payment_method->get('card_exp_year')->value;
     return str_pad($month, 2, 0, STR_PAD_LEFT) . substr($year, -2);
