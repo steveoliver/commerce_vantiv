@@ -67,7 +67,7 @@
       if ((typeof LitlePayPage === 'function')) {
         return;
       }
-      $.getScript(Drupal.vantivEprotect.getPayPageHost(settings) + '/LitlePayPage/litle-api2.js');
+      $.getScript(Drupal.vantivEprotect.getPayPageHost(settings) + '/eProtect/litle-api2.js');
     },
 
     /**
@@ -78,7 +78,7 @@
      * @returns {string} URL of the eProtect host without a trailing slash.
      */
     getPayPageHost: function(settings) {
-      return (settings.mode == 'live') ? 'https://request.securepaypage-litle.com' : 'https://request-prelive.np-securepaypage-litle.com';
+      return (settings.mode == 'live') ? 'https://request.eprotect.vantivcnp.com' : 'https://request.eprotect.vantivprelive.com';
     },
 
     /**

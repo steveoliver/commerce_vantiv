@@ -1,14 +1,14 @@
 eprotect.library.prelive:
   version: 2
   js:
-    https://request-prelive.np-securepaypage-litle.com/LitlePayPage/litle-api2.js: { external: true, minified: true, scope: footer }
+    https://request.eprotect.vantivprelive.com/eProtect/litle-api2.js: { external: true, minified: true, scope: footer }
   dependencies:
     - core/jquery
 
 eprotect.library.live:
   version: 2
   js:
-    https://request.securepaypage-litle.com/LitlePayPage/litle-api2.js: { external: true, minified: true, scope: footer }
+    https://request.eprotect.vantivcnp.com/eProtect/litle-api2.js: { external: true, minified: true, scope: footer }
   dependencies:
     - core/jquery
 

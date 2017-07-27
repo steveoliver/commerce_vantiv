@@ -153,7 +153,7 @@ class VantivApiHelper {
     unset($config['report_group']);
     unset($config['currency_merchant_map']);
 
-    $config['url'] = $config['mode'] == 'live' ? 'https://payments.litle.com/vap/communicator/online' : 'https://prelive.litle.com/vap/communicator/online';
+    $config['url'] = $config['mode'] == 'live' ? 'https://payments.vantivcnp.com/vap/communicator/online' : 'https://payments.vantivprelive.com/vap/communicator/online';
 
     return $config;
   }
