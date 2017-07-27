@@ -2,9 +2,11 @@
 
 namespace Drupal\commerce_vantiv\PluginForm\Onsite;
 
-use Drupal\commerce_payment\Entity\PaymentMethodInterface;
-use Drupal\commerce_payment\PluginForm\PaymentMethodAddForm as BasePaymentMethodAddForm;
 use Drupal\commerce_payment\CreditCard;
+use Drupal\commerce_payment\Entity\PaymentMethodInterface;
+use Drupal\commerce_payment\Exception\DeclineException;
+use Drupal\commerce_payment\Exception\PaymentGatewayException;
+use Drupal\commerce_payment\PluginForm\PaymentMethodAddForm as BasePaymentMethodAddForm;
 use Drupal\commerce_vantiv\Plugin\Commerce\PaymentGateway\OnSite;
 use Drupal\commerce_vantiv\VantivApiHelper;
 use Drupal\Component\Utility\NestedArray;
@@ -15,14 +17,49 @@ class PaymentMethodAddForm extends BasePaymentMethodAddForm {
   /**
    * {@inheritdoc}
    */
+  public function submitConfigurationForm(array &$form, FormStateInterface $form_state) {
+    /** @var \Drupal\commerce_payment\Entity\PaymentMethodInterface $payment_method */
+    $payment_method = $this->entity;
+
+    if ($payment_method->bundle() == 'credit_card') {
+      $this->submitCreditCardForm($form['payment_details'], $form_state);
+    }
+    elseif ($payment_method->bundle() == 'paypal') {
+      $this->submitPayPalForm($form['payment_details'], $form_state);
+    }
+    /** @var \Drupal\commerce_payment\Entity\PaymentMethodInterface $payment_method */
+    $payment_method = $this->entity;
+    $payment_method->setBillingProfile($form['billing_information']['#profile']);
+
+    // Get values from POST instead of form_state (the only change from parent).
+    $values = $this->getPostValues($form['#parents']);
+    /** @var \Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\SupportsStoredPaymentMethodsInterface $payment_gateway_plugin */
+    $payment_gateway_plugin = $this->plugin;
+    // The payment method form is customer facing. For security reasons
+    // the returned errors need to be more generic.
+    try {
+      $payment_gateway_plugin->createPaymentMethod($payment_method, $values['payment_details']);
+    }
+    catch (DeclineException $e) {
+      \Drupal::logger('commerce_payment')->warning($e->getMessage());
+      throw new DeclineException('We encountered an error processing your payment method. Please verify your details and try again.');
+    }
+    catch (PaymentGatewayException $e) {
+      \Drupal::logger('commerce_payment')->error($e->getMessage());
+      throw new PaymentGatewayException('We encountered an unexpected error processing your payment method. Please try again later.');
+    }
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function validateCreditCardForm(array &$element, FormStateInterface $form_state) {
     // @todo Do not validate if ajax
     $triggering_element = $form_state->getTriggeringElement();
     if (!empty($triggering_element['#ajax'])) {
       return true;
     }
-    $post_values = \Drupal::request()->request->all();
-    $values = NestedArray::getValue($post_values, $element['#parents']);
+    $values = $this->getPostValues($element['#parents']);
     $vantiv_card_type = $values['vantivResponseType'];
     $commerce_card_type = VantivApiHelper::getCommerceCreditCardType($vantiv_card_type);
     if (!$commerce_card_type) {
@@ -48,8 +85,7 @@ class PaymentMethodAddForm extends BasePaymentMethodAddForm {
   public function submitCreditCardForm(array $element, FormStateInterface $form_state) {
     /** @var PaymentMethodInterface $payment_method */
     $payment_method = $this->entity;
-    $post_values = \Drupal::request()->request->all();
-    $values = NestedArray::getValue($post_values, $element['#parents']);
+    $values = $this->getPostValues($element['#parents']);
     $payment_method->card_type = VantivApiHelper::getCommerceCreditCardType($values['vantivResponseType']);
     $payment_method->card_number = $values['vantivResponseLastFour'];
     $payment_method->card_exp_month = $values['expiration']['month'];
@@ -136,6 +172,20 @@ class PaymentMethodAddForm extends BasePaymentMethodAddForm {
     }
 
     return $element;
+  }
+
+  /**
+   * Gets values of the given parents from the request's POST parameters.
+   *
+   * @param array $parents
+   *   The path to the requested values.
+   * @return mixed
+   *   The value(s) from the request's POST parameters.
+   */
+  protected function getPostValues(array $parents) {
+    $post_values = \Drupal::request()->request->all();
+
+    return NestedArray::getValue($post_values, $parents);
   }
 
   /**
