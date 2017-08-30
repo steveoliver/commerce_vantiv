@@ -68,6 +68,7 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
       'timeout' => '500',
       'report_group' => 'Default Report Group',
       'mode' => 'test',
+      'machine_name' => '',
       'version' => '1',
     ] + parent::defaultConfiguration();
   }
@@ -80,19 +81,25 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
    */
   public function getSecureConfiguration() {
     $config = $this->getConfiguration();
+    $gateway_machine_name = strtoupper($config['machine_name']);
+    $key_prefix = "COMMERCE_VANTIV_{$gateway_machine_name}_";
+    $user_key = $key_prefix . 'USER';
+    $pass_key = $key_prefix . 'PASS';
+    $mid_key = $key_prefix . 'MERCHANT_ID_DEFAULT';
+    $paypage_key = $key_prefix . 'PAYPAGE_ID';
 
     // Supplement configuration values with environment variables.
-    if (!empty($_ENV['COMMERCE_VANTIV_API_USER'])) {
-      $config['user'] = $_ENV['COMMERCE_VANTIV_API_USER'];
+    if (!empty($_ENV[$user_key])) {
+      $config['user'] = $_ENV[$user_key];
     }
-    if (!empty($_ENV['COMMERCE_VANTIV_API_PASS'])) {
-      $config['password'] = $_ENV['COMMERCE_VANTIV_API_PASS'];
+    if (!empty($_ENV[$pass_key])) {
+      $config['password'] = $_ENV[$pass_key];
     }
-    if (!empty($_ENV['COMMERCE_VANTIV_API_MERCHANT_ID_DEFAULT'])) {
-      $config['currency_merchant_map']['default'] = $_ENV['COMMERCE_VANTIV_API_MERCHANT_ID_DEFAULT'];
+    if (!empty($_ENV[$mid_key])) {
+      $config['currency_merchant_map']['default'] = $_ENV[$mid_key];
     }
-    if (!empty($_ENV['COMMERCE_VANTIV_API_PAYPAGE_ID'])) {
-      $config['paypage_id'] = $_ENV['COMMERCE_VANTIV_API_PAYPAGE_ID'];
+    if (!empty($_ENV[$paypage_key])) {
+      $config['paypage_id'] = $_ENV[$paypage_key];
     }
 
     return $config;
@@ -104,35 +111,57 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
   public function buildConfigurationForm(array $form, FormStateInterface $form_state) {
     $form = parent::buildConfigurationForm($form, $form_state);
 
-    if (!isset($_ENV['COMMERCE_VANTIV_API_USER']) || !isset($_ENV['COMMERCE_VANTIV_API_PASS'])) {
+    $entity = $form_state->getFormObject()->getEntity();
+    $machine_name = $entity ? $entity->id() : NULL;
+
+    $var_key = $machine_name ? strtoupper($machine_name) : 'XXX';
+    $var_key_desc = "Where {$var_key} is the UPPERCASE version of this payment gateway's machine name. For example, if the machine name is 'my_gateway', {$var_key} would be MY_GATEWAY.";
+
+    $user_key = 'COMMERCE_VANTIV_' . $var_key . '_USER';
+    $pass_key = 'COMMERCE_VANTIV_' . $var_key . '_PASS';
+    $mid_key = 'COMMERCE_VANTIV_' . $var_key . '_MERCHANT_ID_DEFAULT';
+    $paypage_key = 'COMMERCE_VANTIV_' . $var_key . '_PAYPAGE_ID';
+
+    if (!isset($_ENV[$user_key]) || !isset($_ENV[$pass_key])) {
       drupal_set_message($this->t("Warning: API credentials should be set in environment variables, NOT stored in configuration."), 'warning');
     }
+
+    $should_be_message = 'Warning: This value should be set in the :key environment variable. ' .  $var_key_desc;
+    $is_set_message = 'Note: This value is set in the :key environment variable.';
 
     $form['user'] = [
       '#type' => 'textfield',
       '#title' => $this->t('User name'),
     ];
-    if (empty($_ENV['COMMERCE_VANTIV_API_USER'])) {
+    if (empty($_ENV[$user_key])) {
       $form['user']['#default_value'] = $this->configuration['user'];
-      $form['user']['#description'] = $this->t('Warning: This value should be set in the COMMERCE_VANTIV_API_USER environment variable.');
+      $form['user']['#description'] = $this->t($should_be_message, [
+        ':key' => $user_key,
+      ]);
     }
     else {
       $form['user']['#attributes']['disabled'] = 'disabled';
-      $form['user']['#default_value'] = $_ENV['COMMERCE_VANTIV_API_USER'];
-      $form['user']['#description'] = $this->t('Note: This value is set in the COMMERCE_VANTIV_API_USER environment variable.');
+      $form['user']['#default_value'] = $_ENV[$user_key];
+      $form['user']['#description'] = $this->t($is_set_message, [
+        ':key' => $user_key,
+      ]);
     }
     $form['password'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Password'),
     ];
-    if (empty($_ENV['COMMERCE_VANTIV_API_PASS'])) {
+    if (empty($_ENV[$pass_key])) {
       $form['password']['#default_value'] = $this->configuration['password'];
-      $form['password']['#description'] = $this->t('Warning: This value should be set in the COMMERCE_VANTIV_API_PASS environment variable.');
+      $form['password']['#description'] = $this->t($should_be_message, [
+        ':key' => $pass_key,
+      ]);
     }
     else {
       $form['password']['#attributes']['disabled'] = 'disabled';
-      $form['password']['#default_value'] = $_ENV['COMMERCE_VANTIV_API_PASS'];
-      $form['password']['#description'] = $this->t('Note: This value is set in the COMMERCE_VANTIV_API_PASS environment variable.');
+      $form['password']['#default_value'] = $_ENV[$pass_key];
+      $form['password']['#description'] = $this->t($is_set_message, [
+        ':key' => $pass_key,
+      ]);
     }
     $form['currency_merchant_map'] = [
       '#type' => 'fieldset',
@@ -142,14 +171,18 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
       '#type' => 'textfield',
       '#title' => $this->t('Default'),
     ];
-    if (empty($_ENV['COMMERCE_VANTIV_API_MERCHANT_ID_DEFAULT'])) {
+    if (empty($_ENV[$mid_key])) {
       $form['currency_merchant_map']['default']['#default_value'] = $this->configuration['currency_merchant_map']['default'];
-      $form['currency_merchant_map']['default']['#description'] = $this->t('Warning: This value should be set in the COMMERCE_VANTIV_API_MERCHANT_ID_DEFAULT environment variable.');
+      $form['currency_merchant_map']['default']['#description'] = $this->t($should_be_message, [
+        ':key' => $mid_key,
+      ]);
     }
     else {
       $form['currency_merchant_map']['default']['#attributes']['disabled'] = 'disabled';
-      $form['currency_merchant_map']['default']['#default_value'] = $_ENV['COMMERCE_VANTIV_API_MERCHANT_ID_DEFAULT'];
-      $form['currency_merchant_map']['default']['#description'] = $this->t('Note: This value is set in the COMMERCE_VANTIV_API_MERCHANT_ID_DEFAULT environment variable.');
+      $form['currency_merchant_map']['default']['#default_value'] = $_ENV[$mid_key];
+      $form['currency_merchant_map']['default']['#description'] = $this->t($is_set_message, [
+        ':key' => $mid_key,
+      ]);
     }
     $form['proxy'] = [
       '#type' => 'textfield',
@@ -160,14 +193,18 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
       '#type' => 'textfield',
       '#title' => $this->t('PayPage ID'),
     ];
-    if (empty($_ENV['COMMERCE_VANTIV_API_PAYPAGE_ID'])) {
-      $form['paypage_id']['#description'] = $this->t('Warning: This value should be set in the COMMERCE_VANTIV_API_PAYPAGE_ID environment variable.');
+    if (empty($_ENV[$paypage_key])) {
+      $form['paypage_id']['#description'] = $this->t($should_be_message, [
+        ':key' => $paypage_key,
+      ]);
       $form['paypage_id']['#default_value'] = $this->configuration['paypage_id'];
     }
     else {
       $form['paypage_id']['#attributes']['disabled'] = 'disabled';
-      $form['paypage_id']['#description'] = $this->t('Note: This value is set in the COMMERCE_VANTIV_API_PAYPAGE_ID environment variable.');
-      $form['paypage_id']['#default_value'] = $_ENV['COMMERCE_VANTIV_API_PAYPAGE_ID'];
+      $form['paypage_id']['#description'] = $this->t($is_set_message, [
+        ':key' => $paypage_key,
+      ]);
+      $form['paypage_id']['#default_value'] = $_ENV[$paypage_key];
     }
     $form['batch_requests_path'] = [
       '#type' => 'textfield',
@@ -240,7 +277,17 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
     parent::submitConfigurationForm($form, $form_state);
 
     if (!$form_state->getErrors()) {
+      $config = $this->getConfiguration();
+      $gateway_machine_name = strtoupper($config['machine_name']);
+      $key_prefix = "COMMERCE_VANTIV_{$gateway_machine_name}_";
+      $user_key = $key_prefix . 'USER';
+      $pass_key = $key_prefix . 'PASS';
+      $mid_key = $key_prefix . 'MERCHANT_ID_DEFAULT';
+      $paypage_key = $key_prefix . 'PAYPAGE_ID';
+
       $values = $form_state->getValue($form['#parents']);
+      $machine_name = $form_state->getValue('id');
+      $this->configuration['machine_name'] = $machine_name;
       foreach ([
         'proxy', 'batch_requests_path',
         'litle_requests_path', 'sftp_username', 'sftp_password',
@@ -248,16 +295,16 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
         'timeout', 'report_group'] as $value) {
         $this->configuration[$value] = $values[$value];
       }
-      if (empty($_ENV['COMMERCE_VANTIV_API_USER'])) {
+      if (empty($_ENV[$user_key])) {
         $this->configuration['user'] = $values['user'];
       }
-      if (empty($_ENV['COMMERCE_VANTIV_API_PASS'])) {
+      if (empty($_ENV[$pass_key])) {
         $this->configuration['password'] = $values['password'];
       }
-      if (empty($_ENV['COMMERCE_VANTIV_API_MERCHANT_ID_DEFAULT'])) {
+      if (empty($_ENV[$mid_key])) {
         $this->configuration['currency_merchant_map']['default'] = $values['currency_merchant_map']['default'];
       }
-      if (empty($_ENV['COMMERCE_VANTIV_API_PAYPAGE_ID'])) {
+      if (empty($_ENV[$paypage_key])) {
         $this->configuration['paypage_id'] = $values['paypage_id'];
       }
     }

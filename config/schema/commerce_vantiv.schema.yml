@@ -62,3 +62,6 @@ commerce_payment.commerce_vantiv.plugin.commerce_vantiv_onsite:
     mode:
       type: string
       label: 'Integration mode'
+    machine_name:
+      type: string
+      label: 'Machine name of the gateway instance'
