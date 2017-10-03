@@ -10,6 +10,6 @@
     },
     "require": {
         "drupal/commerce": "~2.0",
-        "litle/payments-sdk": "9.3.4"
+        "litle/payments-sdk": "9.13.1"
     }
 }
