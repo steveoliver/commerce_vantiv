@@ -1,8 +1,8 @@
 {
     "require": {
         "litle/payments-sdk": {
-            "version" : "9.3.4",
-            "url": "https://github.com/Vantiv/litle-sdk-for-php/archive/9.3.4.zip"
+            "version" : "9.13.1",
+            "url": "https://github.com/Vantiv/litle-sdk-for-php/archive/9.13.1.zip"
         }
     }
 }
