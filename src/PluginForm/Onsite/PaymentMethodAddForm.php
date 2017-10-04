@@ -101,7 +101,7 @@ class PaymentMethodAddForm extends BasePaymentMethodAddForm {
 
     /** @var OnSite $plugin */
     $plugin = $this->plugin;
-    $configuration = $plugin->getSecureConfiguration();
+    $configuration = $plugin->getConfiguration();
     // @todo Get order if it exists.
     // $order = $form_state->getValue('order');
     // Add hidden authorization and request fields.
