@@ -17,9 +17,6 @@ commerce_payment.commerce_vantiv.plugin.commerce_vantiv_onsite:
         default:
           type: string
           label: 'Default'
-    url:
-      type: string
-      label: 'URL'
     proxy:
       type: string
       label: 'Proxy'

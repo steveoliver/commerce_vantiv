@@ -74,6 +74,7 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
       'timeout' => '500',
       'report_group' => 'Default Report Group',
       'mode' => 'test',
+      'machine_name' => '',
       'version' => '1',
     ] + parent::defaultConfiguration();
   }
@@ -106,14 +107,6 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
       '#type' => 'textfield',
       '#title' => $this->t('Default'),
       '#default_value' => $this->configuration['currency_merchant_map']['default'],
-      '#required' => TRUE
-    ];
-    // @see UrlMapper.php in Litle Payments SDK where URL is determined
-    // We should probably send transaction mode as one of the strings defined there.
-    $form['url'] = [
-      '#type' => 'textfield',
-      '#title' => $this->t('URL'),
-      '#default_value' => $this->configuration['url'],
       '#required' => TRUE
     ];
     $form['proxy'] = [
@@ -198,6 +191,8 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
 
     if (!$form_state->getErrors()) {
       $values = $form_state->getValue($form['#parents']);
+      $this->configuration['machine_name'] = $values['id'];
+      $this->configuration['currency_merchant_map']['default'] = $values['currency_merchant_map']['default'];
       foreach ([
         'user', 'password', 'url', 'proxy', 'paypage_id', 'batch_requests_path',
         'litle_requests_path', 'sftp_username', 'sftp_password',
@@ -205,7 +200,6 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
         'timeout', 'report_group'] as $value) {
         $this->configuration[$value] = $values[$value];
       }
-      $this->configuration['currency_merchant_map']['default'] = $values['currency_merchant_map']['default'];
     }
   }
 
