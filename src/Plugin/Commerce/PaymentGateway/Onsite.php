@@ -16,11 +16,10 @@ use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Logger\RfcLogLevel;
-use Drupal\profile\Entity\ProfileInterface;
 use litle\sdk\LitleOnlineRequest;
 
 /**
- * Provides the Onsite payment gateway
+ * Provides the Onsite payment gateway.
  *
  * @CommercePaymentGateway(
  *   id = "vantiv_onsite",
@@ -38,7 +37,11 @@ use litle\sdk\LitleOnlineRequest;
  */
 class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
 
-  /** @var LitleOnlineRequest $api */
+  /**
+   * The point of access to the Vantiv API.
+   *
+   * @var litle\sdk\LitleOnlineRequest
+   */
   protected $api;
 
   /**
@@ -58,7 +61,7 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
       'user' => '',
       'password' => '',
       'currency_merchant_map' => [
-        'default' => ''
+        'default' => '',
       ],
       'proxy' => '',
       'paypage_id' => '',
@@ -88,13 +91,13 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
       '#type' => 'textfield',
       '#title' => $this->t('User name'),
       '#default_value' => $this->configuration['user'],
-      '#required' => TRUE
+      '#required' => TRUE,
     ];
     $form['password'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Password'),
       '#default_value' => $this->configuration['password'],
-      '#required' => TRUE
+      '#required' => TRUE,
     ];
     $form['currency_merchant_map'] = [
       '#type' => 'fieldset',
@@ -104,7 +107,7 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
       '#type' => 'textfield',
       '#title' => $this->t('Default'),
       '#default_value' => $this->configuration['currency_merchant_map']['default'],
-      '#required' => TRUE
+      '#required' => TRUE,
     ];
     $form['proxy'] = [
       '#type' => 'textfield',
@@ -145,13 +148,13 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
       '#type' => 'number',
       '#title' => $this->t('TCP Port'),
       '#default_value' => $this->configuration['tcp_port'],
-      '#required' => TRUE
+      '#required' => TRUE,
     ];
     $form['tcp_timeout'] = [
       '#type' => 'number',
       '#title' => $this->t('TCP Timeout'),
       '#default_value' => $this->configuration['tcp_timeout'],
-      '#required' => TRUE
+      '#required' => TRUE,
     ];
     $form['tcp_ssl'] = [
       '#type' => 'checkbox',
@@ -167,13 +170,13 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
       '#type' => 'number',
       '#title' => $this->t('Timeout'),
       '#default_value' => $this->configuration['timeout'],
-      '#required' => TRUE
+      '#required' => TRUE,
     ];
     $form['report_group'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Report Group'),
       '#default_value' => $this->configuration['report_group'],
-      '#required' => TRUE
+      '#required' => TRUE,
     ];
 
     return $form;
@@ -188,12 +191,14 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
     if (!$form_state->getErrors()) {
       $values = $form_state->getValue($form['#parents']);
       $this->configuration['currency_merchant_map']['default'] = $values['currency_merchant_map']['default'];
-      foreach ([
+      $keys = [
         'user', 'password', 'proxy', 'paypage_id', 'batch_requests_path',
         'litle_requests_path', 'sftp_username', 'sftp_password',
         'batch_url', 'tcp_port', 'tcp_timeout', 'tcp_ssl', 'print_xml',
-        'timeout', 'report_group'] as $value) {
-        $this->configuration[$value] = $values[$value];
+        'timeout', 'report_group',
+      ];
+      foreach ($keys as $key) {
+        $this->configuration[$key] = $values[$key];
       }
     }
   }
@@ -260,18 +265,19 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
         'state' => substr($billing_info->getAdministrativeArea(), -2),
         'zip' => $billing_info->getPostalCode(),
         'country' => $billing_info->getCountryCode(),
-        'email' => $user->getEmail()
+        'email' => $user->getEmail(),
       ],
       'token' => [
         'litleToken' => $payment_method->getRemoteId(),
-        'expDate' => Helper::getVantivCreditCardExpDate($payment_method)
+        'expDate' => Helper::getVantivCreditCardExpDate($payment_method),
       ],
     ];
     $request_method = $capture ? 'saleRequest' : 'authorizationRequest';
     $response_property = $capture ? 'saleResponse' : 'authorizationResponse';
     try {
       $response = $this->api->{$request_method}($hash_in + $request_data);
-    } catch (\Exception $e) {
+    }
+    catch (\Exception $e) {
       throw new InvalidRequestException($e->getMessage());
     }
     $response_array = Helper::getResponseArray($response, $response_property);
@@ -292,7 +298,7 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
    */
   public function capturePayment(PaymentInterface $payment, Price $amount = NULL) {
     $this->assertPaymentState($payment, ['authorization']);
-    /** @var Price $capture_amount */
+    /** @var \Drupal\commerce_price\Price $capture_amount */
     $capture_amount = $amount ?: $payment->getBalance();
     if ($capture_amount->lessThan($payment->getBalance())) {
       $partial_capture = $payment->createDuplicate();
@@ -320,7 +326,8 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
     }
     try {
       $response = $this->api->captureRequest($hash_in + $request_data);
-    } catch (\Exception $e) {
+    }
+    catch (\Exception $e) {
       throw new InvalidRequestException($e->getMessage());
     }
     $response_array = Helper::getResponseArray($response, 'captureResponse');
@@ -349,7 +356,8 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
     ];
     try {
       $response = $this->api->{$request_operation}($hash_in + $request_data);
-    } catch (\Exception $e) {
+    }
+    catch (\Exception $e) {
       throw new InvalidRequestException($e->getMessage());
     }
     $response_array = Helper::getResponseArray($response, $response_operation);
@@ -379,7 +387,8 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
     ];
     try {
       $response = $this->api->creditRequest($hash_in + $request_data);
-    } catch (\Exception $e) {
+    }
+    catch (\Exception $e) {
       throw new InvalidRequestException($e->getMessage());
     }
     $response_array = Helper::getResponseArray($response, 'creditResponse');
@@ -441,7 +450,10 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
    * Registers a token with Vantiv from the AJAX provided registration id.
    *
    * @param \Drupal\commerce_payment\Entity\PaymentMethodInterface $payment_method
-   *    The payment method.
+   *   The payment method.
+   *
+   * @throws \Exception
+   * @throws \Drupal\commerce_payment\Exception\InvalidRequestException
    */
   private function registerToken(PaymentMethodInterface $payment_method) {
     $hash_in = Helper::getApiRequestParamsFromConfig($this->configuration);
@@ -450,12 +462,13 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
     $request_data = [
       'id' => $payment_method->getOriginalId(),
       'customerId' => $billing_profile->getOwnerId(),
-      'paypageRegistrationId' => $payment_method->getRemoteId()
+      'paypageRegistrationId' => $payment_method->getRemoteId(),
     ];
 
     try {
       $response = $this->api->registerTokenRequest($hash_in + $request_data);
-    } catch (\Exception $e) {
+    }
+    catch (\Exception $e) {
       throw new InvalidRequestException($e->getMessage());
     }
     $response_array = Helper::getResponseArray($response, 'registerTokenResponse');
@@ -472,7 +485,6 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
    *
    * @param array $response_array
    *   Vantiv response array.
-   *
    * @param string $txn_type
    *   Transaction type.
    *
@@ -480,12 +492,11 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
    */
   private function ensureSuccessTransaction(array $response_array, $txn_type = 'Transaction') {
     if (!Helper::isResponseSuccess($response_array['response'])) {
-      $error = '@type failed with code @code (@message) (@id).';
-      $message = $this->t($error, [
+      $message = $this->t('@type failed with code @code (@message) (@id).', [
         '@type' => $txn_type,
         '@code' => isset($response_array['response']) ? $response_array['response'] : '',
         '@message' => isset($response_array['message']) ? $response_array['message'] : '',
-        '@id' => isset($response_array['litleTxnId']) ? $response_array['litleTxnId'] : ''
+        '@id' => isset($response_array['litleTxnId']) ? $response_array['litleTxnId'] : '',
       ]);
       \Drupal::logger('commerce_vantiv')->log(RfcLogLevel::ERROR, $message);
       throw new SoftDeclineException($message);

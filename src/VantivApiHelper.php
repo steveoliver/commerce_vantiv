@@ -6,6 +6,11 @@ use Drupal\commerce_payment\Entity\PaymentInterface;
 use Drupal\commerce_payment\Entity\PaymentMethodInterface;
 use litle\sdk\XmlParser as LitleXmlParser;
 
+/**
+ * Class VantivApiHelper.
+ *
+ * @package commerce_vantiv
+ */
 class VantivApiHelper {
 
   /**
@@ -39,6 +44,7 @@ class VantivApiHelper {
     switch ($vantiv_card_type) {
       case 'DI':
         return 10 * $day;
+
       case 'AX':
       case 'MC':
       case 'VI':
@@ -71,7 +77,7 @@ class VantivApiHelper {
    * @return string|bool
    *   Vantiv credit card type code or FALSE if not found.
    */
-  public static function getVantivCreditCardType($commerce_type)  {
+  public static function getVantivCreditCardType($commerce_type) {
     $vantiv_types = [
       'amex' => 'AX',
       'dci' => 'DC',
@@ -79,7 +85,7 @@ class VantivApiHelper {
       'discover' => 'DI',
       'jcb' => 'JC',
       'mastercard' => 'MC',
-      'visa' => 'VI'
+      'visa' => 'VI',
     ];
     if (isset($vantiv_types[$commerce_type])) {
       return $vantiv_types[$commerce_type];
@@ -88,7 +94,7 @@ class VantivApiHelper {
   }
 
   /**
-   * Gets a Drupal Commerce credit card type for a given Vantiv credit card type.
+   * Gets a Drupal Commerce credit card type code for a given Vantiv card type.
    *
    * @param string $vantiv_type
    *   Vantiv credit card type code.
@@ -96,14 +102,14 @@ class VantivApiHelper {
    * @return string|bool
    *   Drupal Commerce credit card type code or FALSE if not found.
    */
-  public static function getCommerceCreditCardType($vantiv_type)  {
+  public static function getCommerceCreditCardType($vantiv_type) {
     $commerce_types = [
       'AX' => 'amex',
       'DC' => 'dc',
       'DI' => 'discover',
       'JC' => 'jcb',
       'MC' => 'mastercard',
-      'VI' => 'visa'
+      'VI' => 'visa',
     ];
     if (isset($commerce_types[$vantiv_type])) {
       return $commerce_types[$vantiv_type];
@@ -126,7 +132,7 @@ class VantivApiHelper {
    */
   public static function getVantivAmountFormat($amount) {
     // Commerce Price Items are decimal to a scale of 6, we need a scale of 2.
-    // Sometimes, though, as in a payment (admin) form, the amount will be scale of 2.
+    // Sometimes, as in a payment (admin) form, the amount will be scale of 2.
     if (substr($amount, -7, 1) === '.') {
       $amount = substr($amount, 0, -4);
     }
@@ -147,7 +153,7 @@ class VantivApiHelper {
    * @return array
    *   An array of values required for Vantiv requests.
    */
-  public static function getApiRequestParamsFromConfig($config) {
+  public static function getApiRequestParamsFromConfig(array $config) {
     $config['reportGroup'] = $config['report_group'];
     $config['merchantId'] = $config['currency_merchant_map']['default'];
     unset($config['report_group']);
@@ -163,14 +169,13 @@ class VantivApiHelper {
    *
    * @param \DomDocument $response_document
    *   Vantiv XML response document.
-   *
    * @param string $payload_attribute
    *   The id of the DomDocumentFragment to retrieve from the response document.
    *
    * @return array|bool
    *   An array of response elements with '@' prefixes removed from some keys.
    */
-  public static function getResponseArray($response_document, $payload_attribute) {
+  public static function getResponseArray(\DomDocument $response_document, $payload_attribute) {
     $payload = LitleXmlParser::getDomDocumentAsString($response_document);
     $xml = simplexml_load_string($payload);
     $json = json_encode($xml);
@@ -214,7 +219,8 @@ class VantivApiHelper {
    */
   public static function isResponseSuccess($response_code) {
     return in_array($response_code, [
-      '000', '801', '802'
+      '000', '801', '802',
     ]);
   }
+
 }

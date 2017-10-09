@@ -54,7 +54,7 @@
   Drupal.vantivEprotect = {
 
     /**
-     * {@property} API timeout setting (milliseconds).
+     * API timeout setting (milliseconds).
      */
     timeout: 15000,
 
@@ -63,7 +63,7 @@
      *
      * @param {Drupal.settings.vantivSettings} settings
      */
-    load: function(settings) {
+    load: function (settings) {
       if ((typeof LitlePayPage === 'function')) {
         return;
       }
@@ -77,7 +77,7 @@
      *
      * @returns {string} URL of the eProtect host without a trailing slash.
      */
-    getPayPageHost: function(settings) {
+    getPayPageHost: function (settings) {
       return (settings.mode == 'live') ? 'https://request.eprotect.vantivcnp.com' : 'https://request.eprotect.vantivprelive.com';
     },
 
@@ -88,7 +88,7 @@
      *
      * @returns {string} jQuery selector for the submit button to control.
      */
-    getSubmitButtonSelector: function(settings) {
+    getSubmitButtonSelector: function (settings) {
       // @todo Determine correct and stable ids to target.
       // Checkout pane vs. Payment pane .. what's the diff?
       var id = settings.checkout_pane ? '#edit-actions #edit-actions-next' : '#edit-actions #edit-actions-next';
@@ -107,7 +107,7 @@
      *
      * @returns {object} HTML field elements keyed by Vantiv request keys.
      */
-    getCommerceFormFields: function(settings) {
+    getCommerceFormFields: function (settings) {
 
       // Some form fields will always be the same.
       var formFields = {
@@ -133,7 +133,7 @@
      *
      * @param {object} response
      */
-    setLitleResponseFields: function(response) {
+    setLitleResponseFields: function (response) {
       $('#vantivResponseCode').val(response.response);
       $('#vantivResponseMessage').val(response.message);
       $('#vantivResponseTime').val(response.responseTime);
@@ -146,7 +146,7 @@
     /**
      * Timeout callback.
      */
-    timeoutOnLitle: function() {
+    timeoutOnLitle: function () {
       alert('We are experiencing technical difficulties (timeout). Please try again later.');
     },
 
@@ -154,9 +154,10 @@
      * Error callback.
      *
      * @param response
+     *
      * @returns {boolean}
      */
-    onErrorAfterLitle: function(response) {
+    onErrorAfterLitle: function (response) {
       Drupal.vantivEprotect.setLitleResponseFields(response);
       if (response.response == '871') {
         alert('Invalid card number. Check and retry. (Not Mod10)');
@@ -200,7 +201,7 @@
      * @return {object}
      *   An object with the properties of the request required when calling Vantiv.
      */
-    getRequest: function(settings) {
+    getRequest: function (settings) {
       return {
         paypageId: $('#vantivRequestPaypageId').val(),
         reportGroup: $('#vantivRequestMerchantTxnId').val(),
@@ -216,7 +217,7 @@
      * @param {string} submitButtonId
      * @param {Drupal.settings.vantivSettings} settings
      */
-    delegateSubmitButton: function(submitButtonId, settings) {
+    delegateSubmitButton: function (submitButtonId, settings) {
 
       // Leave the submit button alone if we've already bound our logic.
       if (window.vantivSubmitButtonBound) {
@@ -226,7 +227,7 @@
       // Bind our custom submit button functionality.
       $(submitButtonId).bind('click', {
         settings: settings
-      }, function(event, passthru) {
+      }, function (event, passthru) {
 
         // Get settings for this closure from the parent scope.
         var settings = event.data.settings;
@@ -242,15 +243,14 @@
         Drupal.vantivEprotect.setLitleResponseFields({'response': '', 'message': ''});
 
         // Build the custom success callback.
-        var onSuccess = function(response) {
+        var onSuccess = function (response) {
 
           // Set the transaction/token values from Vantiv in our hidden form fields.
           Drupal.vantivEprotect.setLitleResponseFields(response);
 
+          // Trigger this submit handler again using the passthru flag.
           // @todo: Test expiration date here to avoid trip to Drupal
           // since all other payment fields are handled client-side.
-
-          // Trigger this submit handler again using the passthru flag.
           $(submitButton).trigger('click', true);
         };
 

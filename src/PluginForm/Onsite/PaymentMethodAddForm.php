@@ -3,15 +3,18 @@
 namespace Drupal\commerce_vantiv\PluginForm\Onsite;
 
 use Drupal\commerce_payment\CreditCard;
-use Drupal\commerce_payment\Entity\PaymentMethodInterface;
 use Drupal\commerce_payment\Exception\DeclineException;
 use Drupal\commerce_payment\Exception\PaymentGatewayException;
 use Drupal\commerce_payment\PluginForm\PaymentMethodAddForm as BasePaymentMethodAddForm;
-use Drupal\commerce_vantiv\Plugin\Commerce\PaymentGateway\OnSite;
 use Drupal\commerce_vantiv\VantivApiHelper;
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Form\FormStateInterface;
 
+/**
+ * The payment method 'add' form for Commerce Vantiv.
+ *
+ * @package commerce_vantiv
+ */
 class PaymentMethodAddForm extends BasePaymentMethodAddForm {
 
   /**
@@ -57,14 +60,14 @@ class PaymentMethodAddForm extends BasePaymentMethodAddForm {
     // @todo Do not validate if ajax
     $triggering_element = $form_state->getTriggeringElement();
     if (!empty($triggering_element['#ajax'])) {
-      return true;
+      return TRUE;
     }
     $values = $this->getPostValues($element['#parents']);
     $vantiv_card_type = $values['vantivResponseType'];
     $commerce_card_type = VantivApiHelper::getCommerceCreditCardType($vantiv_card_type);
     if (!$commerce_card_type) {
       // (if values doesn't have response$type).
-      // (seems to happen when adding a new credit card when one already exists).
+      // (seems to happen when adding new credit card when one already exists).
       $form_state->setError($element['number'], t('Invalid credit card type.'));
       return;
     }
@@ -104,12 +107,9 @@ class PaymentMethodAddForm extends BasePaymentMethodAddForm {
     $configuration = $plugin->getConfiguration();
     // @todo Get order if it exists.
     // $order = $form_state->getValue('order');
-    // Add hidden authorization and request fields.
-
-    // Build the standard credit card form.
     $element = parent::buildCreditCardForm($element, $form_state);
 
-    // Add a css class so that we can easily identify Vantiv related input fields;
+    // Add css class so that we can easily identify Vantiv related input fields;
     // Do not require the fields; Remove "name" attributes from Vantiv related
     // input elements to prevent card data to be sent to Drupal server.
     $credit_card_fields = ['number', 'security_code'];
@@ -124,17 +124,17 @@ class PaymentMethodAddForm extends BasePaymentMethodAddForm {
     $element['vantivRequestPaypageId'] = [
       '#type' => 'hidden',
       '#attributes' => ['id' => 'vantivRequestPaypageId'],
-      '#value' => $configuration['paypage_id']
+      '#value' => $configuration['paypage_id'],
     ];
     $element['vantivRequestMerchantTxnId'] = [
       '#type' => 'hidden',
       '#attributes' => ['id' => 'vantivRequestMerchantTxnId'],
-      '#value' => $configuration['currency_merchant_map']['default']
+      '#value' => $configuration['currency_merchant_map']['default'],
     ];
     $element['vantivRequestOrderId'] = [
       '#type' => 'hidden',
       '#attributes' => ['id' => 'vantivRequestOrderId'],
-      '#value' => (!empty($order) && isset($order->order_id)) ? $order->order_id : 0
+      '#value' => (!empty($order) && isset($order->order_id)) ? $order->order_id : 0,
     ];
     $element['vantivRequestReportGroup'] = [
       '#type' => 'hidden',
@@ -151,7 +151,7 @@ class PaymentMethodAddForm extends BasePaymentMethodAddForm {
     ];
 
     // Add hidden response fields for storing information returned by Vantiv.
-    foreach([
+    foreach ([
       'vantivResponsePaypageRegistrationId',
       'vantivResponseBin',
       'vantivResponseCode',
@@ -160,14 +160,14 @@ class PaymentMethodAddForm extends BasePaymentMethodAddForm {
       'vantivResponseType',
       'vantivResponseLitleTxnId',
       'vantivResponseFirstSix',
-      'vantivResponseLastFour'
+      'vantivResponseLastFour',
     ] as $eprotectfield) {
       $element[$eprotectfield] = [
         '#type' => 'hidden',
         '#value' => '',
         '#attributes' => [
           'id' => $eprotectfield,
-        ]
+        ],
       ];
     }
 
@@ -179,6 +179,7 @@ class PaymentMethodAddForm extends BasePaymentMethodAddForm {
    *
    * @param array $parents
    *   The path to the requested values.
+   *
    * @return mixed
    *   The value(s) from the request's POST parameters.
    */
@@ -189,14 +190,19 @@ class PaymentMethodAddForm extends BasePaymentMethodAddForm {
   }
 
   /**
-   * @param $content
-   * @param $element
-   * @return mixed
+   * Removes the 'name' property from a form element.
+   *
+   * @param string $content
+   *   The HTML string.
+   * @param array $element
+   *   The Drupal render element.
+   *
+   * @return string
+   *   The HTML element with the 'name' property removed.
    */
-  public function removeFormElementName($content, $element) {
+  public function removeFormElementName($content, array $element) {
     $name_pattern = '/\sname\s*=\s*[\'"]?' . preg_quote($element['#name']) . '[\'"]?/';
     return preg_replace($name_pattern, '', $content);
   }
 
 }
-
