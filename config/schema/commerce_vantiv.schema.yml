@@ -1,4 +1,4 @@
-commerce_payment.commerce_vantiv.plugin.commerce_vantiv_onsite:
+commerce_payment.commerce_payment_gateway.plugin.vantiv_onsite:
   type: commerce_payment_gateway_configuration
   mapping:
     version:
@@ -45,10 +45,10 @@ commerce_payment.commerce_vantiv.plugin.commerce_vantiv_onsite:
       type: string
       label: 'TCP timeout'
     tcp_ssl:
-      type: bool
+      type: boolean
       label: 'TCP SSL?'
     print_xml:
-      type: bool
+      type: boolean
       label: 'Print XML?'
     timeout:
       type: integer

@@ -84,9 +84,6 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
    */
   public function buildConfigurationForm(array $form, FormStateInterface $form_state) {
     $form = parent::buildConfigurationForm($form, $form_state);
-
-    // Example credential. Also needs matching schema in
-    // config/schema/commerce_vantiv.schema.yml.
     $form['user'] = [
       '#type' => 'textfield',
       '#title' => $this->t('User name'),
@@ -178,7 +175,6 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
       '#default_value' => $this->configuration['report_group'],
       '#required' => TRUE
     ];
-    // @todo: Add other form fields.
 
     return $form;
   }
@@ -191,10 +187,9 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
 
     if (!$form_state->getErrors()) {
       $values = $form_state->getValue($form['#parents']);
-      $this->configuration['machine_name'] = $values['id'];
       $this->configuration['currency_merchant_map']['default'] = $values['currency_merchant_map']['default'];
       foreach ([
-        'user', 'password', 'url', 'proxy', 'paypage_id', 'batch_requests_path',
+        'user', 'password', 'proxy', 'paypage_id', 'batch_requests_path',
         'litle_requests_path', 'sftp_username', 'sftp_password',
         'batch_url', 'tcp_port', 'tcp_timeout', 'tcp_ssl', 'print_xml',
         'timeout', 'report_group'] as $value) {
