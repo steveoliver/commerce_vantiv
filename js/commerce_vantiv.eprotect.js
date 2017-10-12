@@ -204,9 +204,9 @@
     getRequest: function (settings) {
       return {
         paypageId: $('#vantivRequestPaypageId').val(),
-        reportGroup: $('#vantivRequestMerchantTxnId').val(),
+        id: $('#vantivRequestMerchantTxnId').val(),
         orderId: $('#vantivRequestOrderId').val(),
-        id: $('#vantivRequestReportGroup').val(),
+        reportGroup: $('#vantivRequestReportGroup').val(),
         url: Drupal.vantivEprotect.getPayPageHost(settings)
       };
     },
