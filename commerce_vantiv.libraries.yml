@@ -19,3 +19,4 @@ eprotect:
   dependencies:
     - core/drupalSettings
     - core/jquery
+    - core/jquery.once

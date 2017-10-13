@@ -1,6 +1,6 @@
 /**
  * @file
- * Javascript to generate eProtect token in PCI-compliant way.
+ * Defines behaviors for the Vantiv eProtect payment tokenization feature.
  */
 
 (function ($, Drupal) {
@@ -13,27 +13,19 @@
    * @type {Drupal~behavior}
    *
    * @prop {Drupal~behaviorAttach} attach
-   *   Attaches the checkoutPaneOverview behavior.
+   *   Attaches the vantivCreditCardEprotect behavior.
    *
-   * @see Drupal.checkoutPaneOverview.attach
+   * @see Drupal.vantivEprotect.attach
    */
   Drupal.behaviors.vantivCreditCardEprotect = {
     attach: function (context, settings) {
-
-      // Load eProtect functionality if settings exist and is not already loaded.
-      if (settings.commerce_vantiv && !window.vantivSubmitButtonBound) {
-
-        // Get only the settings we will use.
-        settings = settings.commerce_vantiv.eprotect;
-
-        // Load the eProtect library since we can't load it via an #attached
-        // library on the payment form.
-        Drupal.vantivEprotect.load(settings);
-
-        // Customize the submit button functionality for each form.
-        var buttonId = Drupal.vantivEprotect.getSubmitButtonSelector(settings);
-        Drupal.vantivEprotect.delegateSubmitButton(buttonId, settings);
-      }
+      // Only attach when required elements exist.
+      $('#vantivRequestPaypageId').once().each(function () {
+        Drupal.vantivEprotect.attach(context, settings);
+      });
+    },
+    detach: function(context, settings, trigger) {
+      Drupal.vantivEprotect.detach(context, settings, trigger);
     }
   };
 
@@ -59,6 +51,41 @@
     timeout: 15000,
 
     /**
+     * Attaches our functionality in the given context.
+     *
+     * @param {object} context
+     *   The context.
+     * @param {Drupal.settings} settings
+     *   The Drupal settings.
+     */
+    attach: function (context, settings) {
+      if (settings.commerce_vantiv) {
+        settings = settings.commerce_vantiv.eprotect;
+        Drupal.vantivEprotect.load(settings);
+        var buttonId = Drupal.vantivEprotect.getSubmitButtonSelector(settings);
+        Drupal.vantivEprotect.delegateSubmitButton(buttonId, settings);
+      }
+    },
+
+    /**
+     * Detaches our functionality from the given context.
+     *
+     * @param {object} context
+     *   The context.
+     * @param {Drupal.settings} settings
+     *   The Drupal settings.
+     * @param trigger
+     *   Either 'unload', 'move', or 'serialize'.
+     */
+    detach: function (context, settings, trigger) {
+      if (settings.commerce_vantiv) {
+        settings = settings.commerce_vantiv.eprotect;
+        var buttonId = Drupal.vantivEprotect.getSubmitButtonSelector(settings);
+        Drupal.vantivEprotect.undelegateSubmitButton(buttonId, settings);
+      }
+    },
+
+    /**
      * Loads the external Litle PayPage (eProtect) library script for the current transaction mode.
      *
      * @param {Drupal.settings.vantivSettings} settings
@@ -68,6 +95,81 @@
         return;
       }
       $.getScript(Drupal.vantivEprotect.getPayPageHost(settings) + '/eProtect/litle-api2.js');
+    },
+
+    /**
+     * Delegates the form's submit button click event to Vantiv eProtect.
+     *
+     * @param {string} submitButtonId
+     * @param {Drupal.settings.vantivSettings} settings
+     */
+    delegateSubmitButton: function (submitButtonId, settings) {
+      $(submitButtonId).on('click', {
+        settings: settings
+      }, Drupal.vantivEprotect.handlePaymentFormSubmitClickEvent);
+    },
+
+    /**
+     * Undelegates the Vantiv eProtect handler from the form's submit button.
+     *
+     * @param {string} submitButtonId
+     * @param {Drupal.settings.vantivSettings} settings
+     */
+    undelegateSubmitButton: function (submitButtonId, settings) {
+      $(submitButtonId).off('click', Drupal.vantivEprotect.handlePaymentFormSubmitClickEvent);
+    },
+
+    /**
+     * Handles the checkout form submit event when Vantiv eProtect is in use.
+     *
+     * @param {object} event
+     *   The click event.
+     * @param {boolean} passthru
+     *   TRUE to use the default form submit handling.
+     *
+     * @return {boolean}
+     *   TRUE if the form should continue with default submit handling.
+     */
+    handlePaymentFormSubmitClickEvent: function (event, passthru) {
+
+      // Get settings for this closure from the parent scope.
+      var settings = event.data.settings;
+
+      // Use the default (Drupal) behaviour if we've already successfully submitted to Vantiv.
+      if (passthru) {
+        return true;
+      }
+
+      var submitButton = event.currentTarget;
+
+      // Clear Litle response fields.
+      Drupal.vantivEprotect.setLitleResponseFields({'response': '', 'message': ''});
+
+      // Build the custom success callback.
+      var onSuccess = function (response) {
+
+        // Set the transaction/token values from Vantiv in our hidden form fields.
+        Drupal.vantivEprotect.setLitleResponseFields(response);
+
+        // Trigger this submit handler again using the passthru flag.
+        // @todo: Test expiration date here to avoid trip to Drupal
+        // since all other payment fields are handled client-side.
+        $(submitButton).trigger('click', true);
+      };
+
+      // Build the request based on current form values.
+      var request = Drupal.vantivEprotect.getRequest(settings);
+      var fields = Drupal.vantivEprotect.getCommerceFormFields(settings);
+      var onError = Drupal.vantivEprotect.onErrorAfterLitle;
+      var onTimeout = Drupal.vantivEprotect.timeoutOnLitle;
+      var timeout = Drupal.vantivEprotect.timeout;
+
+      // Make the API call.
+      var api = new LitlePayPage();
+      api.sendToLitle(request, fields, onSuccess, onError, onTimeout, timeout);
+
+      // Prevent further regular form submit handling.
+      return false;
     },
 
     /**
@@ -209,67 +311,6 @@
         reportGroup: $('#vantivRequestReportGroup').val(),
         url: Drupal.vantivEprotect.getPayPageHost(settings)
       };
-    },
-
-    /**
-     * Delegates the form's Continue button click event to Vantiv eProtect.
-     *
-     * @param {string} submitButtonId
-     * @param {Drupal.settings.vantivSettings} settings
-     */
-    delegateSubmitButton: function (submitButtonId, settings) {
-
-      // Leave the submit button alone if we've already bound our logic.
-      if (window.vantivSubmitButtonBound) {
-        return;
-      }
-
-      // Bind our custom submit button functionality.
-      $(submitButtonId).bind('click', {
-        settings: settings
-      }, function (event, passthru) {
-
-        // Get settings for this closure from the parent scope.
-        var settings = event.data.settings;
-
-        // Use the default (Drupal) behaviour if we've already successfully submitted to Vantiv.
-        if (passthru) {
-          return true;
-        }
-
-        var submitButton = event.currentTarget;
-
-        // Clear Litle response fields.
-        Drupal.vantivEprotect.setLitleResponseFields({'response': '', 'message': ''});
-
-        // Build the custom success callback.
-        var onSuccess = function (response) {
-
-          // Set the transaction/token values from Vantiv in our hidden form fields.
-          Drupal.vantivEprotect.setLitleResponseFields(response);
-
-          // Trigger this submit handler again using the passthru flag.
-          // @todo: Test expiration date here to avoid trip to Drupal
-          // since all other payment fields are handled client-side.
-          $(submitButton).trigger('click', true);
-        };
-
-        // Build the request based on current form values.
-        var request = Drupal.vantivEprotect.getRequest(settings);
-        var fields = Drupal.vantivEprotect.getCommerceFormFields(settings);
-        var onError = Drupal.vantivEprotect.onErrorAfterLitle;
-        var onTimeout = Drupal.vantivEprotect.timeoutOnLitle;
-        var timeout = Drupal.vantivEprotect.timeout;
-
-        // Make the API call.
-        var api = new LitlePayPage();
-        api.sendToLitle(request, fields, onSuccess, onError, onTimeout, timeout);
-
-        // Prevent further regular form submit handling.
-        return false;
-      });
-
-      window.vantivSubmitButtonBound = true;
     }
 
   }
