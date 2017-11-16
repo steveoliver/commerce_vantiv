@@ -193,7 +193,7 @@
     getSubmitButtonSelector: function (settings) {
       // @todo Determine correct and stable ids to target.
       // Checkout pane vs. Payment pane .. what's the diff?
-      var id = settings.checkout_pane ? '#edit-actions #edit-actions-next' : '#edit-actions #edit-actions-next';
+      var id = settings.checkout_pane ? '#edit-actions #edit-actions-next' : '#edit-actions-submit';
       if (settings.cardonfile_form) {
         // @todo: Figure out what this is supposed to be once we have card on file create form.
         id = '#commerce-vantiv-creditcard-cardonfile-create-form #edit-submit';
@@ -218,13 +218,13 @@
       };
 
       // Some form fields will change based on which form they are a part of.
-      if (settings.checkout_pane) {
-        formFields.accountNum = $('[data-drupal-selector="edit-payment-information-add-payment-method-payment-details-number"]').get(0);
-        formFields.cvv2 = $('[data-drupal-selector="edit-payment-information-add-payment-method-payment-details-security-code"]').get(0);
-      }
-      else if (settings.cardonfile_form) {
+      if (settings.cardonfile_form) {
         formFields.accountNum = $('[data-drupal-selector="edit-payment-method-payment-details-number"]').get(0);
         formFields.cvv2 = $('[data-drupal-selector="edit-payment-method-payment-details-security-code"]').get(0);
+      }
+      else {
+        formFields.accountNum = $('[data-drupal-selector="edit-payment-information-add-payment-method-payment-details-number"]').get(0);
+        formFields.cvv2 = $('[data-drupal-selector="edit-payment-information-add-payment-method-payment-details-security-code"]').get(0);
       }
 
       return formFields;
