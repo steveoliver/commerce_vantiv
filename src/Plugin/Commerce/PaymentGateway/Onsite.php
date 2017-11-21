@@ -11,12 +11,16 @@ use Drupal\commerce_payment\PaymentMethodTypeManager;
 use Drupal\commerce_payment\PaymentTypeManager;
 use Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\OnsitePaymentGatewayBase;
 use Drupal\commerce_price\Price;
+use Drupal\commerce_vantiv\Event\FilterVantivRequestEvent;
+use Drupal\commerce_vantiv\Event\VantivEvents;
 use Drupal\commerce_vantiv\VantivApiHelper as Helper;
 use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Logger\RfcLogLevel;
 use litle\sdk\LitleOnlineRequest;
+use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 /**
  * Provides the Onsite payment gateway.
@@ -45,12 +49,33 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
   protected $api;
 
   /**
+   * The event dispatcher.
+   *
+   * @var \Symfony\Component\EventDispatcher\EventDispatcherInterface
+   */
+  protected $eventDispatcher;
+
+  /**
    * {@inheritdoc}
    */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, PaymentTypeManager $payment_type_manager, PaymentMethodTypeManager $payment_method_type_manager, TimeInterface $time) {
+  public function __construct(array $configuration, $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, PaymentTypeManager $payment_type_manager, PaymentMethodTypeManager $payment_method_type_manager, TimeInterface $time, EventDispatcherInterface $event_dispatcher) {
     parent::__construct($configuration, $plugin_id, $plugin_definition, $entity_type_manager, $payment_type_manager, $payment_method_type_manager, $time);
 
     $this->api = new LitleOnlineRequest();
+    $this->eventDispatcher = $event_dispatcher;
+  }
+
+  public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) {
+    return new static(
+      $configuration,
+      $plugin_id,
+      $plugin_definition,
+      $container->get('entity_type.manager'),
+      $container->get('plugin.manager.commerce_payment_type'),
+      $container->get('plugin.manager.commerce_payment_method_type'),
+      $container->get('datetime.time'),
+      $container->get('event_dispatcher')
+    );
   }
 
   /**
@@ -272,10 +297,12 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
         'expDate' => Helper::getVantivCreditCardExpDate($payment_method),
       ],
     ];
+    $event = new FilterVantivRequestEvent($payment, $hash_in, $request_data);
+    $this->eventDispatcher->dispatch(VantivEvents::FILTER_REQUEST, $event);
     $request_method = $capture ? 'saleRequest' : 'authorizationRequest';
     $response_property = $capture ? 'saleResponse' : 'authorizationResponse';
     try {
-      $response = $this->api->{$request_method}($hash_in + $request_data);
+      $response = $this->api->{$request_method}($hash_in + $event->getRequest());
     }
     catch (\Exception $e) {
       throw new InvalidRequestException($e->getMessage());
