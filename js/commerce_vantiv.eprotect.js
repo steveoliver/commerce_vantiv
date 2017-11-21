@@ -36,6 +36,8 @@
    *   The payment gateway transaction environment, either 'live' or 'prelive'.
    * @prop {boolean} checkout_pane
    *   TRUE if operating on a Checkout 'new payment method' form.
+   * @prop {array} parents
+   *   An array of #parents from the Drupal form structure.
    */
 
   /**
@@ -192,14 +194,7 @@
      */
     getSubmitButtonSelector: function (settings) {
       // @todo Determine correct and stable ids to target.
-      // Checkout pane vs. Payment pane .. what's the diff?
-      var id = settings.checkout_pane ? '#edit-actions #edit-actions-next' : '#edit-actions-submit';
-      if (settings.cardonfile_form) {
-        // @todo: Figure out what this is supposed to be once we have card on file create form.
-        id = '#commerce-vantiv-creditcard-cardonfile-create-form #edit-submit';
-      }
-
-      return id;
+      return settings.checkout_pane ? '#edit-actions #edit-actions-next' : '#edit-actions-submit';
     },
 
     /**
@@ -216,16 +211,13 @@
         'paypageRegistrationId': $('#vantivResponsePaypageRegistrationId').get(0),
         'bin': $('#vantivResponseBin').get(0)
       };
-
-      // Some form fields will change based on which form they are a part of.
-      if (settings.cardonfile_form) {
-        formFields.accountNum = $('[data-drupal-selector="edit-payment-method-payment-details-number"]').get(0);
-        formFields.cvv2 = $('[data-drupal-selector="edit-payment-method-payment-details-security-code"]').get(0);
-      }
-      else {
-        formFields.accountNum = $('[data-drupal-selector="edit-payment-information-add-payment-method-payment-details-number"]').get(0);
-        formFields.cvv2 = $('[data-drupal-selector="edit-payment-information-add-payment-method-payment-details-security-code"]').get(0);
-      }
+      // Some fields will change based on context.
+      var parents = settings.parents.map(function (item) {
+        return item.replace(/_/g, '-');
+      })
+      var parentsId = 'edit-' + parents.join('-');
+      formFields.accountNum = $('[data-drupal-selector=' + parentsId + '-number' + ']').get(0);
+      formFields.cvv2 = $('[data-drupal-selector=' + parentsId + '-security-code' + ']').get(0);
 
       return formFields;
     },

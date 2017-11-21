@@ -151,6 +151,7 @@ class PaymentMethodAddForm extends BasePaymentMethodAddForm {
       $element['#attached']['drupalSettings']['commerce_vantiv']['eprotect'] = [
         'mode' => $plugin->getMode() == 'live' ? 'live' : 'prelive',
         'checkout_pane' => $next_button,
+        'parents' => $element['#parents'],
       ];
     }
 
