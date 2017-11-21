@@ -190,11 +190,10 @@
      *
      * @param {Drupal.settings.vantivSettings} settings Vantiv settings.
      *
-     * @returns {string} jQuery selector for the submit button to control.
+     * @returns {string} jQuery selector for the submit button(s) to control.
      */
     getSubmitButtonSelector: function (settings) {
-      // @todo Determine correct and stable ids to target.
-      return settings.checkout_pane ? '#edit-actions #edit-actions-next' : '#edit-actions-submit';
+      return '[data-drupal-selector="edit-actions"] [name="op"]';
     },
 
     /**

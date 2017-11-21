@@ -144,13 +144,9 @@ class PaymentMethodAddForm extends BasePaymentMethodAddForm {
 
     // Attach and configure the front-end eProtect functionality.
     if ($library = $plugin->getJsLibrary()) {
-      $complete_form = $form_state->getCompleteForm();
       $element['#attached']['library'][] = $library;
-      // @todo: Determine if we are in a checkout flow some other way?
-      $next_button = (isset($complete_form['actions']['next']));
       $element['#attached']['drupalSettings']['commerce_vantiv']['eprotect'] = [
         'mode' => $plugin->getMode() == 'live' ? 'live' : 'prelive',
-        'checkout_pane' => $next_button,
         'parents' => $element['#parents'],
       ];
     }
