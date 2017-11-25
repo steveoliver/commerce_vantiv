@@ -15,6 +15,7 @@ use Drupal\commerce_vantiv\Event\FilterVantivRequestEvent;
 use Drupal\commerce_vantiv\Event\VantivEvents;
 use Drupal\commerce_vantiv\VantivApiHelper as Helper;
 use Drupal\Component\Datetime\TimeInterface;
+use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Logger\RfcLogLevel;
@@ -297,16 +298,20 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
         'expDate' => Helper::getVantivCreditCardExpDate($payment_method),
       ],
     ];
+
     $event = new FilterVantivRequestEvent($payment, $hash_in, $request_data);
-    $this->eventDispatcher->dispatch(VantivEvents::FILTER_REQUEST, $event);
-    $request_method = $capture ? 'saleRequest' : 'authorizationRequest';
-    $response_property = $capture ? 'saleResponse' : 'authorizationResponse';
+    $this->eventDispatcher->dispatch(VantivEvents::PAYMENT_CREATE_REQUEST, $event);
+
     try {
-      $response = $this->api->{$request_method}($hash_in + $event->getRequest());
+      $request_method = $capture ? 'saleRequest' : 'authorizationRequest';
+      $request = NestedArray::mergeDeep($hash_in, $event->getRequest());
+      $response = $this->api->{$request_method}($request);
     }
     catch (\Exception $e) {
       throw new InvalidRequestException($e->getMessage());
     }
+
+    $response_property = $capture ? 'saleResponse' : 'authorizationResponse';
     $response_array = Helper::getResponseArray($response, $response_property);
 
     $this->ensureSuccessTransaction($response_array, 'Payment');
@@ -351,8 +356,13 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
     if ($payment->partial) {
       $request_data['partial'] = 'true';
     }
+
+    $event = new FilterVantivRequestEvent($payment, $hash_in, $request_data);
+    $this->eventDispatcher->dispatch(VantivEvents::PAYMENT_CAPTURE_REQUEST, $event);
+
     try {
-      $response = $this->api->captureRequest($hash_in + $request_data);
+      $request = NestedArray::mergeDeep($hash_in, $event->getRequest());
+      $response = $this->api->captureRequest($request);
     }
     catch (\Exception $e) {
       throw new InvalidRequestException($e->getMessage());
@@ -381,8 +391,13 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
       'id' => $payment->getAuthorizedTime(),
       'litleTxnId' => $payment->getRemoteId(),
     ];
+
+    $event = new FilterVantivRequestEvent($payment, $hash_in, $request_data);
+    $this->eventDispatcher->dispatch(VantivEvents::PAYMENT_VOID_REQUEST, $event);
+
     try {
-      $response = $this->api->{$request_operation}($hash_in + $request_data);
+      $request = NestedArray::mergeDeep($hash_in, $event->getRequest());
+      $response = $this->api->{$request_operation}($request);
     }
     catch (\Exception $e) {
       throw new InvalidRequestException($e->getMessage());
@@ -412,8 +427,13 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
       'litleTxnId' => $payment->getRemoteId(),
       'amount' => Helper::getVantivAmountFormat($amount->getNumber()),
     ];
+
+    $event = new FilterVantivRequestEvent($payment, $hash_in, $request_data);
+    $this->eventDispatcher->dispatch(VantivEvents::PAYMENT_REFUND_REQUEST, $event);
+
     try {
-      $response = $this->api->creditRequest($hash_in + $request_data);
+      $request = NestedArray::mergeDeep($hash_in, $event->getRequest());
+      $response = $this->api->creditRequest($request);
     }
     catch (\Exception $e) {
       throw new InvalidRequestException($e->getMessage());
