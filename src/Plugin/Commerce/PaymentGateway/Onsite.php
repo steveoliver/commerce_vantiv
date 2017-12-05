@@ -37,7 +37,8 @@ use Symfony\Component\EventDispatcher\EventDispatcherInterface;
  *   credit_card_types = {
  *     "amex", "discover", "mastercard", "visa",
  *   },
- *   js_library = "commerce_vantiv/eprotect"
+ *   js_library = "commerce_vantiv/eprotect",
+ *   modes = {"pre-live", "live", "post-live"}
  * )
  */
 class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
