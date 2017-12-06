@@ -146,7 +146,7 @@ class PaymentMethodAddForm extends BasePaymentMethodAddForm {
     if ($library = $plugin->getJsLibrary()) {
       $element['#attached']['library'][] = $library;
       $element['#attached']['drupalSettings']['commerce_vantiv']['eprotect'] = [
-        'mode' => $plugin->getMode() == 'live' ? 'live' : 'prelive',
+        'mode' => $plugin->getMode(),
         'parents' => $element['#parents'],
       ];
     }
