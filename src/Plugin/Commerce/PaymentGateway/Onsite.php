@@ -546,7 +546,6 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
         '@message' => isset($response_array['message']) ? $response_array['message'] : '',
         '@id' => isset($response_array['litleTxnId']) ? $response_array['litleTxnId'] : '',
       ]);
-      \Drupal::logger('commerce_vantiv')->log(RfcLogLevel::ERROR, $message);
       throw new SoftDeclineException($message);
     }
   }
