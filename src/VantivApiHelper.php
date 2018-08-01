@@ -159,7 +159,15 @@ class VantivApiHelper {
     unset($config['report_group']);
     unset($config['currency_merchant_map']);
 
-    $config['url'] = $config['mode'] == 'live' ? 'https://payments.vantivcnp.com/vap/communicator/online' : 'https://payments.vantivprelive.com/vap/communicator/online';
+    if ($config['mode'] == 'live') {
+      $config['url'] = 'https://payments.vantivcnp.com/vap/communicator/online';
+    }
+    elseif ($config['mode'] == 'post-live') {
+      $config['url'] = 'https://payments.vantivpostlive.com/vap/communicator/online';
+    }
+    else {
+      $config['url'] = 'https://payments.vantivprelive.com/vap/communicator/online';
+    }
 
     return $config;
   }

@@ -40,4 +40,13 @@ final class VantivEvents {
    */
   const PAYMENT_REFUND_REQUEST = 'commerce_vantiv.payment_refund_request';
 
+  /**
+   * Event fired at an unsuccessful transaction
+   *
+   * @Event
+   *
+   * @see \Drupal\commerce_vantiv\Event\TransactionUnsuccessfulEvent
+   */
+  const TRANSACTION_UNSUCCESSFUL = 'commerce_vantiv.transaction_unsuccessful';
+
 }

@@ -182,7 +182,14 @@
      * @returns {string} URL of the eProtect host without a trailing slash.
      */
     getPayPageHost: function (settings) {
-      return (settings.mode == 'live') ? 'https://request.eprotect.vantivcnp.com' : 'https://request.eprotect.vantivprelive.com';
+      if (settings.mode === 'live') {
+        return 'https://request.eprotect.vantivcnp.com';
+      }
+      if (settings.mode === 'post-live') {
+        return 'https://request.eprotect.vantivpostlive.com';
+      }
+
+      return 'https://request.eprotect.vantivprelive.com';
     },
 
     /**
