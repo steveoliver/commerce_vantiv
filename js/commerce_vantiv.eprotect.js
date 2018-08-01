@@ -185,7 +185,7 @@
       if (settings.mode === 'live') {
         return 'https://request.eprotect.vantivcnp.com';
       }
-      else if (settings.mode === 'post-live') {
+      if (settings.mode === 'post-live') {
         return 'https://request.eprotect.vantivpostlive.com';
       }
 
