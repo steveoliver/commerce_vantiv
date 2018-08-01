@@ -12,6 +12,7 @@ use Drupal\commerce_payment\PaymentTypeManager;
 use Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\OnsitePaymentGatewayBase;
 use Drupal\commerce_price\Price;
 use Drupal\commerce_vantiv\Event\FilterVantivRequestEvent;
+use Drupal\commerce_vantiv\Event\TransactionUnsuccessfulEvent;
 use Drupal\commerce_vantiv\Event\VantivEvents;
 use Drupal\commerce_vantiv\VantivApiHelper as Helper;
 use Drupal\Component\Datetime\TimeInterface;
@@ -540,12 +541,17 @@ class OnSite extends OnsitePaymentGatewayBase implements OnsiteInterface {
    */
   private function ensureSuccessTransaction(array $response_array, $txn_type = 'Transaction') {
     if (!Helper::isResponseSuccess($response_array['response'])) {
+
+      $event = new TransactionUnsuccessfulEvent($response_array);
+      $this->eventDispatcher->dispatch(VantivEvents::TRANSACTION_UNSUCCESSFUL, $event);
+
       $message = $this->t('@type failed with code @code (@message) (@id).', [
         '@type' => $txn_type,
         '@code' => isset($response_array['response']) ? $response_array['response'] : '',
         '@message' => isset($response_array['message']) ? $response_array['message'] : '',
         '@id' => isset($response_array['litleTxnId']) ? $response_array['litleTxnId'] : '',
       ]);
+
       throw new SoftDeclineException($message);
     }
   }
